@@ -1506,7 +1506,8 @@
         <div class="top-tabs" id="top-tabs">
             <button class="top-tab active" data-pane="pane-design">Builder</button>
             <button class="top-tab" data-pane="pane-code">Source</button>
-            <button class="top-tab" id="tab-preview-btn">Preview</button>
+            <button class="top-tab" id="tab-preview-btn" style="fill:#10b981"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/> </svg>
+  </button>
         </div>
         <div class="header-actions">
             <div class="menu-wrap">
@@ -1515,10 +1516,10 @@
                     </svg></button>
                 <div class="menu-dropdown" id="menu-dropdown">
                     <button class="menu-item" id="mi-undo"><svg viewBox="0 0 24 24">
-                            <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
+                            <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z " style="fill:#fff" />
                         </svg>Undo<span class="mi-info" id="history-info"></span></button>
                     <button class="menu-item" id="mi-redo"><svg viewBox="0 0 24 24">
-                            <path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z" />
+                            <path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z" style="fill:#fff"/>
                         </svg>Redo</button>
                 </div>
             </div>
@@ -1680,7 +1681,7 @@
             padding: '20px',
             maxWidth: '',
             confirmLeave: false,
-            confirmLeaveMessage: 'Are you sure you want to leave?'
+            confirmLeaveMessage: 'Are you sure you want to leave? Changes may not be saved'
         };
         let history = [],
             historyIdx = -1,
@@ -5128,6 +5129,193 @@
         renderDock('');
         snapshot();
         renderDesign();
+        
+        /* =========================================================================
+   PATCH — Fix Body Logic (dup/del/params) + drag-to-top
+   Paste this BEFORE the closingsctag. Pure additive code.
+   ========================================================================= */
+(function () {
+    /* ----------------------------------------------------------------------
+       FIX 1 — Body Logic: dup/del/parameter changes re-render to the WRONG
+       container (#logic-rules-container) instead of #body-logic-container.
+       We patch renderLogicRules to route to renderBodyLogic when the array
+       being rendered is the bodyLogic array.
+    ---------------------------------------------------------------------- */
+    if (typeof renderLogicRules === 'function' && typeof renderBodyLogic === 'function') {
+        const _origRenderLogicRules = renderLogicRules;
+        // eslint-disable-next-line no-global-assign
+        renderLogicRules = function (arr) {
+            if (arr === bodyLogic) {
+                renderBodyLogic();
+            } else {
+                _origRenderLogicRules(arr);
+            }
+        };
+    }
+
+    /* ----------------------------------------------------------------------
+       FIX 2 — `activeLogicId` is stale when the user opens the Global
+       Settings modal (it keeps the id of whichever element's Logic modal
+       was opened last). Reset it to null when opening Global so the inline
+       "renderLogicRules(activeLogicId === null ? bodyLogic : …)" branch
+       picks bodyLogic instead of doing deepFind(<stale id>).
+       Restore it when the modal closes so element logic still works.
+    ---------------------------------------------------------------------- */
+    if (typeof openGlobal === 'function') {
+        const _origOpenGlobal = openGlobal;
+        let _savedActiveLogicId = null;
+        // eslint-disable-next-line no-global-assign
+        openGlobal = function () {
+            _savedActiveLogicId = (typeof activeLogicId !== 'undefined') ? activeLogicId : null;
+            activeLogicId = null;
+            return _origOpenGlobal.apply(this, arguments);
+        };
+        const globalModal = document.getElementById('modal-global');
+        if (globalModal) {
+            globalModal.addEventListener('click', function (e) {
+                // close-on-overlay / close-button — restore previous activeLogicId
+                if (!globalModal.classList.contains('active')) {
+                    activeLogicId = _savedActiveLogicId;
+                }
+            }, true);
+            // MutationObserver to catch the .active class being removed
+            new MutationObserver(() => {
+                if (!globalModal.classList.contains('active')) {
+                    activeLogicId = _savedActiveLogicId;
+                }
+            }).observe(globalModal, { attributes: true, attributeFilter: ['class'] });
+        }
+    }
+
+    /* ----------------------------------------------------------------------
+       FIX 3 — Body Logic dup/del buttons: belt-and-braces re-bind.
+       After buildLogicRow returns we override the two header buttons so they
+       call the correct re-render based on whether `arr` is bodyLogic.
+    ---------------------------------------------------------------------- */
+    if (typeof buildLogicRow === 'function') {
+        const _origBuildLogicRow = buildLogicRow;
+        // eslint-disable-next-line no-global-assign
+        buildLogicRow = function (rule, idx, arr) {
+            const row = _origBuildLogicRow(rule, idx, arr);
+            const btns = row.querySelectorAll('.logic-row-header .btn-icon');
+            if (btns.length >= 2) {
+                const dup = btns[0];
+                const del = btns[1];
+                dup.onclick = function () {
+                    arr.splice(idx + 1, 0, JSON.parse(JSON.stringify(rule)));
+                    snapshot();
+                    if (arr === bodyLogic) renderBodyLogic();
+                    else renderLogicRules(arr);
+                    renderDesign();
+                };
+                del.onclick = function () {
+                    arr.splice(idx, 1);
+                    snapshot();
+                    if (arr === bodyLogic) renderBodyLogic();
+                    else renderLogicRules(arr);
+                    renderDesign();
+                };
+            }
+            return row;
+        };
+    }
+
+    /* ----------------------------------------------------------------------
+       FIX 4 — Drag-an-element-to-the-top.
+       Add a permanent drop-zone at the very top of #design-stage so the
+       user can always drop above the first element, plus a per-render
+       refresh hook so the zone is re-inserted after every renderDesign().
+    ---------------------------------------------------------------------- */
+    function ensureTopDropZone() {
+        const stage = document.getElementById('design-stage');
+        if (!stage) return;
+        // skip when canvas is empty (empty-state placeholder is shown)
+        if (!stage.querySelector('.el-block')) return;
+
+        let zone = stage.querySelector(':scope > .apx-top-drop');
+        if (!zone) {
+            zone = document.createElement('div');
+            zone.className = 'apx-top-drop';
+            zone.style.cssText =
+                'height:14px;margin:0 0 6px 0;border-radius:8px;' +
+                'border:2px dashed transparent;transition:all .15s ease;';
+            zone.ondragover = function (e) {
+                if (!draggedElementId) return;
+                e.preventDefault();
+                e.stopPropagation();
+                // clear other indicators
+                document.querySelectorAll(
+                    '.drag-over-top,.drag-over-bottom,.drag-over-inside'
+                ).forEach(x => x.classList.remove(
+                    'drag-over-top', 'drag-over-bottom', 'drag-over-inside'
+                ));
+                zone.style.height = '34px';
+                zone.style.background = 'rgba(0,115,255,.12)';
+                zone.style.borderColor = 'var(--accent, #0073FF)';
+            };
+            zone.ondragleave = function () {
+                zone.style.height = '14px';
+                zone.style.background = 'transparent';
+                zone.style.borderColor = 'transparent';
+            };
+            zone.ondrop = function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                zone.style.height = '14px';
+                zone.style.background = 'transparent';
+                zone.style.borderColor = 'transparent';
+                if (!draggedElementId) return;
+                const src = deepFind(draggedElementId);
+                if (!src) return;
+                const moved = src.parent.splice(src.index, 1)[0];
+                elements.unshift(moved);                      // insert at position 0
+                draggedElementId = null;
+                snapshot();
+                renderDesign();
+            };
+            stage.insertBefore(zone, stage.firstChild);
+        }
+    }
+
+    // Re-insert the zone after every renderDesign() call.
+    if (typeof renderDesign === 'function') {
+        const _origRenderDesign = renderDesign;
+        // eslint-disable-next-line no-global-assign
+        renderDesign = function () {
+            const r = _origRenderDesign.apply(this, arguments);
+            ensureTopDropZone();
+            return r;
+        };
+    }
+    // First-time insert (in case the page is already rendered)
+    ensureTopDropZone();
+
+    /* ----------------------------------------------------------------------
+       FIX 4b — Also make the existing per-element top zone more reliable:
+       widen its detection band a bit for non-container elements so the user
+       doesn't have to hit a 2-pixel sweet spot. We delegate via capture
+       phase so we don't fight the existing inline handlers.
+    ---------------------------------------------------------------------- */
+    document.addEventListener('dragover', function (e) {
+        if (!draggedElementId) return;
+        const wrap = e.target.closest && e.target.closest('.el-block');
+        if (!wrap) return;
+        const id = wrap.dataset.id;
+        if (!id || id === draggedElementId) return;
+        // If we are clearly in the upper portion, force drag-over-top
+        const r = wrap.getBoundingClientRect();
+        const y = e.clientY - r.top;
+        if (y >= 0 && y < Math.min(18, r.height * 0.35)) {
+            document.querySelectorAll(
+                '.drag-over-top,.drag-over-bottom,.drag-over-inside'
+            ).forEach(x => x.classList.remove(
+                'drag-over-top', 'drag-over-bottom', 'drag-over-inside'
+            ));
+            wrap.classList.add('drag-over-top');
+            e.preventDefault();
+        }
+    }, true);
+})();
     </script>
 </body>
 
