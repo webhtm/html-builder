@@ -1494,6 +1494,39 @@
                 display: none
             }
         }
+        .btn-primary {
+    background: var(--accent);           /* was: linear-gradient(...) */
+    color: #fff;
+    padding: 8px 14px;
+    box-shadow: none;                    /* was: 0 6px 18px var(--accent-glow) */
+    font-weight: 600
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);     /* solid hover instead of brightness filter */
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+    /* removed: filter / transform */
+}
+
+.dock-btn:hover {
+    background: rgba(255, 255, 255, .06);
+    color: var(--text);
+    border-color: var(--border-strong);
+    /* the empty rule already had a stray transform spot — keep it empty, no translateY */
+}
+
+.dock-search-btn:hover {
+    background: rgba(99, 102, 241, .2);
+    /*  */
+}
+
+.toast { background: var(--accent); box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+.toast.error { background: var(--danger); }
+.toast.success { background: var(--success); }
+
     </style>
 </head>
 
@@ -2202,6 +2235,18 @@
                 value: 'set_timeout',
                 label: 'Wait N ms then Action',
                 group: 'Misc'
+            }, {
+                value: 'add_elements_to',
+                label: '➕ Add Element(s) Into Container',
+                group: 'DOM'
+            }, {
+                value: 'clear_children',
+                label: '🧹 Remove All Children Of Container',
+                group: 'DOM'
+            }, {
+                value: 'remove_element',
+                label: '🗑 Remove Element From DOM',
+                group: 'DOM'
             }
         ];
         const innerActionList = logicActions.filter(a => !a.value.startsWith('if_') && a.value !== 'set_timeout');
@@ -2245,6 +2290,51 @@
         }, {
             value: 'is_number',
             label: 'is a number'
+        }, {
+            value: 'matches_regex',
+            label: 'matches regex (/…/)'
+        }, {
+            value: 'not_matches_regex',
+            label: 'does NOT match regex'
+        }, {
+            value: 'is_email',
+            label: 'is an email'
+        }, {
+            value: 'is_url',
+            label: 'is a URL'
+        }, {
+            value: 'is_integer',
+            label: 'is an integer'
+        }, {
+            value: 'is_float',
+            label: 'is a decimal number'
+        }, {
+            value: 'is_alpha',
+            label: 'is letters only'
+        }, {
+            value: 'is_alphanumeric',
+            label: 'is alphanumeric'
+        }, {
+            value: 'is_string',
+            label: 'is non-numeric string'
+        }, {
+            value: 'is_boolean',
+            label: 'is boolean (true/false)'
+        }, {
+            value: 'length_eq',
+            label: 'length equals'
+        }, {
+            value: 'length_gt',
+            label: 'length greater than'
+        }, {
+            value: 'length_lt',
+            label: 'length less than'
+        }, {
+            value: 'same_type',
+            label: 'same JS type as'
+        }, {
+            value: 'type_is',
+            label: 'typeof equals'
         }];
         const operandKinds = [{
             value: 'variable',
@@ -3949,20 +4039,48 @@
                         set(prefix + 'El', v);
                         updateCode();
                     }, 'Pick element…')));
-                    const sel = createSelect([{
-                        value: 'text',
-                        label: 'Text content'
-                    }, {
-                        value: 'value',
-                        label: 'Input value'
-                    }, {
-                        value: 'checked',
-                        label: 'Checked state'
-                    }], obj[prefix + 'ExType'] || 'value', v => {
+                    const exTypeOpts = [
+                        { value: 'text', label: 'Text content' },
+                        { value: 'value', label: 'Input value' },
+                        { value: 'checked', label: 'Checked state' },
+                        { value: 'style', label: '🎨 Computed Style…' },
+                        { value: 'attribute', label: '🏷 Attribute…' },
+                        { value: 'tag', label: 'Tag name (div, p, …)' },
+                        { value: 'id', label: 'Element ID' },
+                        { value: 'classes', label: 'Class list (string)' },
+                        { value: 'has_class', label: 'Has class…' },
+                        { value: 'width', label: 'Width (px)' },
+                        { value: 'height', label: 'Height (px)' },
+                        { value: 'children_count', label: 'Children count' },
+                        { value: 'is_visible', label: 'Is visible (true/false)' }
+                    ];
+                    const currentEx = obj[prefix + 'ExType'] || 'value';
+                    const sel = createSelect(exTypeOpts, currentEx, v => {
                         set(prefix + 'ExType', v);
+                        renderInner();
                         updateCode();
                     });
                     innerHost.appendChild(labelWrap('Extract', sel));
+                    if (currentEx === 'style') {
+                        innerHost.appendChild(labelWrap('CSS Property', createSelect(styleProperties, obj[prefix + 'ExProp'] || 'color', v => {
+                            set(prefix + 'ExProp', v);
+                            updateCode();
+                        }, 'Pick CSS prop…')));
+                    } else if (currentEx === 'attribute') {
+                        const ai = document.createElement('input');
+                        ai.type = 'text';
+                        ai.value = obj[prefix + 'ExAttr'] || '';
+                        ai.placeholder = 'href, data-x, aria-label…';
+                        ai.oninput = e => { set(prefix + 'ExAttr', e.target.value); updateCode(); };
+                        innerHost.appendChild(labelWrap('Attribute Name', ai));
+                    } else if (currentEx === 'has_class') {
+                        const ai = document.createElement('input');
+                        ai.type = 'text';
+                        ai.value = obj[prefix + 'ExAttr'] || '';
+                        ai.placeholder = 'class-name';
+                        ai.oninput = e => { set(prefix + 'ExAttr', e.target.value); updateCode(); };
+                        innerHost.appendChild(labelWrap('Class Name', ai));
+                    }
                 }
             }
             renderInner();
@@ -4332,7 +4450,93 @@
                     if (map[k]) rule[map[k]] = v;
                 });
                 parent.appendChild(ip);
-            } else if (a === 'reload_page') parent.innerHTML = '<div class="logic-params-empty">No parameters needed.</div>';
+            } else if (a === 'add_elements_to') {
+                const r1 = document.createElement('div');
+                r1.className = 'row';
+                r1.appendChild(pRow('Target Container', createSelect(opts.elementOpts, rule.targetEl, v => {
+                    set('targetEl', v);
+                    updateCode();
+                }, 'Pick container/modal…')));
+                const posOpts = [
+                    { value: 'append', label: 'Append (at end)' },
+                    { value: 'prepend', label: 'Prepend (at start)' },
+                    { value: 'replace', label: 'Replace all children' }
+                ];
+                r1.appendChild(pRow('Insert Mode', createSelect(posOpts, rule.insertMode || 'append', v => {
+                    set('insertMode', v);
+                    updateCode();
+                })));
+                parent.appendChild(r1);
+                rule.newElements = rule.newElements || [];
+                const listWrap = document.createElement('div');
+                listWrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:8px;';
+                function renderSpecList() {
+                    listWrap.innerHTML = '';
+                    rule.newElements.forEach((spec, i) => {
+                        const card = document.createElement('div');
+                        card.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:10px;background:rgba(99,102,241,.04);display:flex;flex-direction:column;gap:6px;';
+                        const head = document.createElement('div');
+                        head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;';
+                        const ttl = document.createElement('strong');
+                        ttl.style.cssText = 'font-size:.78rem;color:var(--text)';
+                        ttl.textContent = 'Element #' + (i + 1);
+                        const rm = document.createElement('button');
+                        rm.className = 'btn-icon danger';
+                        rm.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+                        rm.onclick = () => { rule.newElements.splice(i, 1); renderSpecList(); updateCode(); };
+                        head.appendChild(ttl); head.appendChild(rm);
+                        card.appendChild(head);
+                        const row = document.createElement('div');
+                        row.className = 'row';
+                        const tagOpts = [
+                            { value: 'div', label: 'div' }, { value: 'span', label: 'span' },
+                            { value: 'p', label: 'p' }, { value: 'h1', label: 'h1' }, { value: 'h2', label: 'h2' },
+                            { value: 'h3', label: 'h3' }, { value: 'h4', label: 'h4' },
+                            { value: 'button', label: 'button' }, { value: 'a', label: 'a (link)' },
+                            { value: 'img', label: 'img' }, { value: 'input', label: 'input' },
+                            { value: 'ul', label: 'ul' }, { value: 'ol', label: 'ol' }, { value: 'li', label: 'li' },
+                            { value: 'label', label: 'label' }, { value: 'section', label: 'section' },
+                            { value: 'hr', label: 'hr' }, { value: 'br', label: 'br' }, { value: 'strong', label: 'strong' },
+                            { value: 'em', label: 'em' }, { value: 'code', label: 'code' }
+                        ];
+                        row.appendChild(pRow('Tag', createSelect(tagOpts, spec.tag || 'div', v => { spec.tag = v; updateCode(); })));
+                        row.appendChild(pRow('ID (optional)', txt(spec.id, v => { spec.id = v; updateCode(); }, 'unique-id')));
+                        card.appendChild(row);
+                        const row2 = document.createElement('div');
+                        row2.className = 'row';
+                        row2.appendChild(pRow('Text / innerHTML', txt(spec.text, v => { spec.text = v; updateCode(); }, 'Hello {name}!')));
+                        row2.appendChild(pRow('Class(es)', txt(spec.className, v => { spec.className = v; updateCode(); }, 'btn primary')));
+                        card.appendChild(row2);
+                        const row3 = document.createElement('div');
+                        row3.className = 'row';
+                        row3.appendChild(pRow('Attributes (key=value; …)', txt(spec.attrs, v => { spec.attrs = v; updateCode(); }, 'href=#; data-x=1; type=button')));
+                        row3.appendChild(pRow('Inline Styles (css)', txt(spec.styles, v => { spec.styles = v; updateCode(); }, 'color:red; padding:8px; border-radius:6px')));
+                        card.appendChild(row3);
+                        listWrap.appendChild(card);
+                    });
+                }
+                renderSpecList();
+                parent.appendChild(listWrap);
+                const addBtn = document.createElement('button');
+                addBtn.className = 'btn-ghost';
+                addBtn.style.cssText = 'align-self:flex-start;margin-top:6px';
+                addBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg> Add another element';
+                addBtn.onclick = () => {
+                    rule.newElements.push({ tag: 'div', text: '', className: '', id: '', attrs: '', styles: '' });
+                    renderSpecList();
+                    updateCode();
+                };
+                parent.appendChild(addBtn);
+                parent.appendChild(elTip('Text supports {var}/{expr}. Styles use CSS syntax ("color:red; padding:8px"). Attributes use "k=v" separated by ";".'));
+            } else if (a === 'clear_children') parent.appendChild(pRow('Target Container', createSelect(opts.elementOpts, rule.targetEl, v => {
+                set('targetEl', v);
+                updateCode();
+            })));
+            else if (a === 'remove_element') parent.appendChild(pRow('Target Element', createSelect(opts.elementOpts, rule.targetEl, v => {
+                set('targetEl', v);
+                updateCode();
+            })));
+            else if (a === 'reload_page') parent.innerHTML = '<div class="logic-params-empty">No parameters needed.</div>';
             else parent.innerHTML = '<div class="logic-params-empty">No parameters.</div>';
         }
 
@@ -4596,9 +4800,30 @@
                 const id = rule[prefix + 'El'];
                 const ex = rule[prefix + 'ExType'] || 'value';
                 if (!id) return "''";
-                if (ex === 'text') return `(document.getElementById('${id}')?.textContent||'')`;
-                if (ex === 'checked') return `(!!document.getElementById('${id}')?.checked)`;
-                return `(document.getElementById('${id}')?.value||'')`;
+                const getEl = `document.getElementById('${id}')`;
+                if (ex === 'text') return `(${getEl}?.textContent||'')`;
+                if (ex === 'checked') return `(!!${getEl}?.checked)`;
+                if (ex === 'value') return `(${getEl}?.value||'')`;
+                if (ex === 'style') {
+                    const p = rule[prefix + 'ExProp'] || 'color';
+                    return `(${getEl}?getComputedStyle(${getEl}).${p.replace(/-([a-z])/g,(m,c)=>c.toUpperCase())}:'')`;
+                }
+                if (ex === 'attribute') {
+                    const a = rule[prefix + 'ExAttr'] || '';
+                    return `(${getEl}?.getAttribute('${escJs(a)}')||'')`;
+                }
+                if (ex === 'tag') return `(${getEl}?.tagName?.toLowerCase()||'')`;
+                if (ex === 'id') return `(${getEl}?.id||'')`;
+                if (ex === 'classes') return `(${getEl}?.className||'')`;
+                if (ex === 'has_class') {
+                    const c = rule[prefix + 'ExAttr'] || '';
+                    return `(${getEl}?.classList.contains('${escJs(c)}')||false)`;
+                }
+                if (ex === 'width') return `(${getEl}?.offsetWidth||0)`;
+                if (ex === 'height') return `(${getEl}?.offsetHeight||0)`;
+                if (ex === 'children_count') return `(${getEl}?.children?.length||0)`;
+                if (ex === 'is_visible') return `(${getEl}? (${getEl}.offsetParent!==null && getComputedStyle(${getEl}).display!=='none' && getComputedStyle(${getEl}).visibility!=='hidden'):false)`;
+                return `(${getEl}?.value||'')`;
             }
             return "''";
         }
@@ -4634,6 +4859,42 @@
                     return `(${L}!==''&&${L}!==null&&${L}!==undefined)`;
                 case 'is_number':
                     return `(!isNaN(parseFloat(${L}))&&isFinite(${L}))`;
+                case 'matches_regex': {
+                    const pat = String(rule.rightConst||rule.regexPattern||'');
+                    const flg = String(rule.regexFlags||'');
+                    return `(new RegExp('${escJs(pat)}','${escJs(flg)}')).test(String(${L}))`;
+                }
+                case 'not_matches_regex': {
+                    const pat = String(rule.rightConst||rule.regexPattern||'');
+                    const flg = String(rule.regexFlags||'');
+                    return `!(new RegExp('${escJs(pat)}','${escJs(flg)}')).test(String(${L}))`;
+                }
+                case 'is_email':
+                    return `/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(${L}))`;
+                case 'is_url':
+                    return `/^(https?:\\/\\/|\\/\\/)[^\\s]+$/i.test(String(${L}))`;
+                case 'is_integer':
+                    return `(/^-?\\d+$/.test(String(${L}).trim()))`;
+                case 'is_float':
+                    return `(/^-?\\d+\\.\\d+$/.test(String(${L}).trim()))`;
+                case 'is_alpha':
+                    return `(/^[A-Za-z]+$/.test(String(${L})))`;
+                case 'is_alphanumeric':
+                    return `(/^[A-Za-z0-9]+$/.test(String(${L})))`;
+                case 'is_string':
+                    return `(typeof (${L})==='string' && isNaN(parseFloat(${L})))`;
+                case 'is_boolean':
+                    return `(String(${L})==='true'||String(${L})==='false'||typeof(${L})==='boolean')`;
+                case 'length_eq':
+                    return `(String(${L}).length===parseInt(${R}||0,10))`;
+                case 'length_gt':
+                    return `(String(${L}).length>parseInt(${R}||0,10))`;
+                case 'length_lt':
+                    return `(String(${L}).length<parseInt(${R}||0,10))`;
+                case 'same_type':
+                    return `((typeof (${L}))===(typeof (${R})) && ((!isNaN(parseFloat(${L}))===!isNaN(parseFloat(${R})))))`;
+                case 'type_is':
+                    return `((typeof (${L}))===String(${R}))`;
                 default:
                     return '';
             }
@@ -4775,6 +5036,19 @@
                     if (!inner) return '';
                     return `if(!document.getElementById('${rule.sourceInput}')?.value){ ${inner} }`;
                 }
+                case 'add_elements_to': {
+                    if (!rule.targetEl || !rule.newElements || !rule.newElements.length) return '';
+                    const specs = rule.newElements.map(s => {
+                        const tag = (s.tag || 'div').replace(/[^a-zA-Z0-9]/g, '');
+                        return `{tag:'${escJs(tag)}',text:APX_interp('${escJs(s.text||'')}'),id:'${escJs(s.id||'')}',cls:'${escJs(s.className||'')}',attrs:'${escJs(s.attrs||'')}',styles:'${escJs(s.styles||'')}'}`;
+                    }).join(',');
+                    const mode = rule.insertMode || 'append';
+                    return `APX_addEls('${rule.targetEl}','${mode}',[${specs}]);`;
+                }
+                case 'clear_children':
+                    return rule.targetEl ? `{const _c=document.getElementById('${rule.targetEl}');if(_c) _c.innerHTML='';}` : '';
+                case 'remove_element':
+                    return rule.targetEl ? `document.getElementById('${rule.targetEl}')?.remove();` : '';
                 default:
                     return '';
             }
@@ -4920,6 +5194,7 @@
             js += `function APX_expr(fn){try{return fn();}catch(e){return '';}}\n`;
             js += `function APX_add(a,b){const na=parseFloat(a),nb=parseFloat(b);if(!isNaN(na)&&!isNaN(nb)&&String(a).trim()!==''&&String(b).trim()!=='')return na+nb;return String(a)+String(b);}\n`;
             js += `function APX_interp(s){return String(s).replace(/\\{([^{}]+)\\}/g,(m,e)=>{try{let js=e.replace(/sqrt\\s*\\(/g,'Math.sqrt(').replace(/([a-zA-Z_]\\w*)/g,function(x){return (x in STATE)?("STATE['"+x+"']"):x;});let r=Function('STATE','return ('+js+')')(STATE);return (r===undefined||r===null)?m:r;}catch(_){return (e in STATE)?STATE[e]:m;}});}\n`;
+            js += `function APX_addEls(parentId,mode,specs){var p=document.getElementById(parentId);if(!p)return;var host=p;if(p.classList&&p.classList.contains('apx-modal-card')===false){var card=p.querySelector('.apx-modal-card');if(card)host=card;}if(mode==='replace'){host.innerHTML='';}specs.forEach(function(s){var el=document.createElement(s.tag||'div');if(s.id)el.id=s.id;if(s.cls)el.className=s.cls;if(s.text!=null && s.text!=='')el.innerHTML=s.text;if(s.attrs){s.attrs.split(';').forEach(function(kv){var eq=kv.indexOf('=');if(eq>0){var k=kv.slice(0,eq).trim();var v=kv.slice(eq+1).trim();if(k)el.setAttribute(k,v);}else{var k2=kv.trim();if(k2)el.setAttribute(k2,'');}});}if(s.styles){try{el.style.cssText=s.styles;}catch(_){}}if(mode==='prepend'){host.insertBefore(el,host.firstChild);}else{host.appendChild(el);}});}\n`;
             js += `Object.keys(STATE).forEach(APX_sync);\n`;
             if (gs.confirmLeave) {
                 const msg = escJs(gs.confirmLeaveMessage || 'Are you sure you want to leave?');
@@ -5317,6 +5592,7 @@
     }, true);
 })();
     </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 
 </html>
