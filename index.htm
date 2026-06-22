@@ -2235,18 +2235,6 @@
                 value: 'set_timeout',
                 label: 'Wait N ms then Action',
                 group: 'Misc'
-            }, {
-                value: 'add_elements_to',
-                label: '➕ Add Element(s) Into Container',
-                group: 'DOM'
-            }, {
-                value: 'clear_children',
-                label: '🧹 Remove All Children Of Container',
-                group: 'DOM'
-            }, {
-                value: 'remove_element',
-                label: '🗑 Remove Element From DOM',
-                group: 'DOM'
             }
         ];
         const innerActionList = logicActions.filter(a => !a.value.startsWith('if_') && a.value !== 'set_timeout');
@@ -2290,51 +2278,6 @@
         }, {
             value: 'is_number',
             label: 'is a number'
-        }, {
-            value: 'matches_regex',
-            label: 'matches regex (/…/)'
-        }, {
-            value: 'not_matches_regex',
-            label: 'does NOT match regex'
-        }, {
-            value: 'is_email',
-            label: 'is an email'
-        }, {
-            value: 'is_url',
-            label: 'is a URL'
-        }, {
-            value: 'is_integer',
-            label: 'is an integer'
-        }, {
-            value: 'is_float',
-            label: 'is a decimal number'
-        }, {
-            value: 'is_alpha',
-            label: 'is letters only'
-        }, {
-            value: 'is_alphanumeric',
-            label: 'is alphanumeric'
-        }, {
-            value: 'is_string',
-            label: 'is non-numeric string'
-        }, {
-            value: 'is_boolean',
-            label: 'is boolean (true/false)'
-        }, {
-            value: 'length_eq',
-            label: 'length equals'
-        }, {
-            value: 'length_gt',
-            label: 'length greater than'
-        }, {
-            value: 'length_lt',
-            label: 'length less than'
-        }, {
-            value: 'same_type',
-            label: 'same JS type as'
-        }, {
-            value: 'type_is',
-            label: 'typeof equals'
         }];
         const operandKinds = [{
             value: 'variable',
@@ -4039,48 +3982,20 @@
                         set(prefix + 'El', v);
                         updateCode();
                     }, 'Pick element…')));
-                    const exTypeOpts = [
-                        { value: 'text', label: 'Text content' },
-                        { value: 'value', label: 'Input value' },
-                        { value: 'checked', label: 'Checked state' },
-                        { value: 'style', label: '🎨 Computed Style…' },
-                        { value: 'attribute', label: '🏷 Attribute…' },
-                        { value: 'tag', label: 'Tag name (div, p, …)' },
-                        { value: 'id', label: 'Element ID' },
-                        { value: 'classes', label: 'Class list (string)' },
-                        { value: 'has_class', label: 'Has class…' },
-                        { value: 'width', label: 'Width (px)' },
-                        { value: 'height', label: 'Height (px)' },
-                        { value: 'children_count', label: 'Children count' },
-                        { value: 'is_visible', label: 'Is visible (true/false)' }
-                    ];
-                    const currentEx = obj[prefix + 'ExType'] || 'value';
-                    const sel = createSelect(exTypeOpts, currentEx, v => {
+                    const sel = createSelect([{
+                        value: 'text',
+                        label: 'Text content'
+                    }, {
+                        value: 'value',
+                        label: 'Input value'
+                    }, {
+                        value: 'checked',
+                        label: 'Checked state'
+                    }], obj[prefix + 'ExType'] || 'value', v => {
                         set(prefix + 'ExType', v);
-                        renderInner();
                         updateCode();
                     });
                     innerHost.appendChild(labelWrap('Extract', sel));
-                    if (currentEx === 'style') {
-                        innerHost.appendChild(labelWrap('CSS Property', createSelect(styleProperties, obj[prefix + 'ExProp'] || 'color', v => {
-                            set(prefix + 'ExProp', v);
-                            updateCode();
-                        }, 'Pick CSS prop…')));
-                    } else if (currentEx === 'attribute') {
-                        const ai = document.createElement('input');
-                        ai.type = 'text';
-                        ai.value = obj[prefix + 'ExAttr'] || '';
-                        ai.placeholder = 'href, data-x, aria-label…';
-                        ai.oninput = e => { set(prefix + 'ExAttr', e.target.value); updateCode(); };
-                        innerHost.appendChild(labelWrap('Attribute Name', ai));
-                    } else if (currentEx === 'has_class') {
-                        const ai = document.createElement('input');
-                        ai.type = 'text';
-                        ai.value = obj[prefix + 'ExAttr'] || '';
-                        ai.placeholder = 'class-name';
-                        ai.oninput = e => { set(prefix + 'ExAttr', e.target.value); updateCode(); };
-                        innerHost.appendChild(labelWrap('Class Name', ai));
-                    }
                 }
             }
             renderInner();
@@ -4450,93 +4365,7 @@
                     if (map[k]) rule[map[k]] = v;
                 });
                 parent.appendChild(ip);
-            } else if (a === 'add_elements_to') {
-                const r1 = document.createElement('div');
-                r1.className = 'row';
-                r1.appendChild(pRow('Target Container', createSelect(opts.elementOpts, rule.targetEl, v => {
-                    set('targetEl', v);
-                    updateCode();
-                }, 'Pick container/modal…')));
-                const posOpts = [
-                    { value: 'append', label: 'Append (at end)' },
-                    { value: 'prepend', label: 'Prepend (at start)' },
-                    { value: 'replace', label: 'Replace all children' }
-                ];
-                r1.appendChild(pRow('Insert Mode', createSelect(posOpts, rule.insertMode || 'append', v => {
-                    set('insertMode', v);
-                    updateCode();
-                })));
-                parent.appendChild(r1);
-                rule.newElements = rule.newElements || [];
-                const listWrap = document.createElement('div');
-                listWrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:8px;';
-                function renderSpecList() {
-                    listWrap.innerHTML = '';
-                    rule.newElements.forEach((spec, i) => {
-                        const card = document.createElement('div');
-                        card.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:10px;background:rgba(99,102,241,.04);display:flex;flex-direction:column;gap:6px;';
-                        const head = document.createElement('div');
-                        head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;';
-                        const ttl = document.createElement('strong');
-                        ttl.style.cssText = 'font-size:.78rem;color:var(--text)';
-                        ttl.textContent = 'Element #' + (i + 1);
-                        const rm = document.createElement('button');
-                        rm.className = 'btn-icon danger';
-                        rm.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
-                        rm.onclick = () => { rule.newElements.splice(i, 1); renderSpecList(); updateCode(); };
-                        head.appendChild(ttl); head.appendChild(rm);
-                        card.appendChild(head);
-                        const row = document.createElement('div');
-                        row.className = 'row';
-                        const tagOpts = [
-                            { value: 'div', label: 'div' }, { value: 'span', label: 'span' },
-                            { value: 'p', label: 'p' }, { value: 'h1', label: 'h1' }, { value: 'h2', label: 'h2' },
-                            { value: 'h3', label: 'h3' }, { value: 'h4', label: 'h4' },
-                            { value: 'button', label: 'button' }, { value: 'a', label: 'a (link)' },
-                            { value: 'img', label: 'img' }, { value: 'input', label: 'input' },
-                            { value: 'ul', label: 'ul' }, { value: 'ol', label: 'ol' }, { value: 'li', label: 'li' },
-                            { value: 'label', label: 'label' }, { value: 'section', label: 'section' },
-                            { value: 'hr', label: 'hr' }, { value: 'br', label: 'br' }, { value: 'strong', label: 'strong' },
-                            { value: 'em', label: 'em' }, { value: 'code', label: 'code' }
-                        ];
-                        row.appendChild(pRow('Tag', createSelect(tagOpts, spec.tag || 'div', v => { spec.tag = v; updateCode(); })));
-                        row.appendChild(pRow('ID (optional)', txt(spec.id, v => { spec.id = v; updateCode(); }, 'unique-id')));
-                        card.appendChild(row);
-                        const row2 = document.createElement('div');
-                        row2.className = 'row';
-                        row2.appendChild(pRow('Text / innerHTML', txt(spec.text, v => { spec.text = v; updateCode(); }, 'Hello {name}!')));
-                        row2.appendChild(pRow('Class(es)', txt(spec.className, v => { spec.className = v; updateCode(); }, 'btn primary')));
-                        card.appendChild(row2);
-                        const row3 = document.createElement('div');
-                        row3.className = 'row';
-                        row3.appendChild(pRow('Attributes (key=value; …)', txt(spec.attrs, v => { spec.attrs = v; updateCode(); }, 'href=#; data-x=1; type=button')));
-                        row3.appendChild(pRow('Inline Styles (css)', txt(spec.styles, v => { spec.styles = v; updateCode(); }, 'color:red; padding:8px; border-radius:6px')));
-                        card.appendChild(row3);
-                        listWrap.appendChild(card);
-                    });
-                }
-                renderSpecList();
-                parent.appendChild(listWrap);
-                const addBtn = document.createElement('button');
-                addBtn.className = 'btn-ghost';
-                addBtn.style.cssText = 'align-self:flex-start;margin-top:6px';
-                addBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg> Add another element';
-                addBtn.onclick = () => {
-                    rule.newElements.push({ tag: 'div', text: '', className: '', id: '', attrs: '', styles: '' });
-                    renderSpecList();
-                    updateCode();
-                };
-                parent.appendChild(addBtn);
-                parent.appendChild(elTip('Text supports {var}/{expr}. Styles use CSS syntax ("color:red; padding:8px"). Attributes use "k=v" separated by ";".'));
-            } else if (a === 'clear_children') parent.appendChild(pRow('Target Container', createSelect(opts.elementOpts, rule.targetEl, v => {
-                set('targetEl', v);
-                updateCode();
-            })));
-            else if (a === 'remove_element') parent.appendChild(pRow('Target Element', createSelect(opts.elementOpts, rule.targetEl, v => {
-                set('targetEl', v);
-                updateCode();
-            })));
-            else if (a === 'reload_page') parent.innerHTML = '<div class="logic-params-empty">No parameters needed.</div>';
+            } else if (a === 'reload_page') parent.innerHTML = '<div class="logic-params-empty">No parameters needed.</div>';
             else parent.innerHTML = '<div class="logic-params-empty">No parameters.</div>';
         }
 
@@ -4800,30 +4629,9 @@
                 const id = rule[prefix + 'El'];
                 const ex = rule[prefix + 'ExType'] || 'value';
                 if (!id) return "''";
-                const getEl = `document.getElementById('${id}')`;
-                if (ex === 'text') return `(${getEl}?.textContent||'')`;
-                if (ex === 'checked') return `(!!${getEl}?.checked)`;
-                if (ex === 'value') return `(${getEl}?.value||'')`;
-                if (ex === 'style') {
-                    const p = rule[prefix + 'ExProp'] || 'color';
-                    return `(${getEl}?getComputedStyle(${getEl}).${p.replace(/-([a-z])/g,(m,c)=>c.toUpperCase())}:'')`;
-                }
-                if (ex === 'attribute') {
-                    const a = rule[prefix + 'ExAttr'] || '';
-                    return `(${getEl}?.getAttribute('${escJs(a)}')||'')`;
-                }
-                if (ex === 'tag') return `(${getEl}?.tagName?.toLowerCase()||'')`;
-                if (ex === 'id') return `(${getEl}?.id||'')`;
-                if (ex === 'classes') return `(${getEl}?.className||'')`;
-                if (ex === 'has_class') {
-                    const c = rule[prefix + 'ExAttr'] || '';
-                    return `(${getEl}?.classList.contains('${escJs(c)}')||false)`;
-                }
-                if (ex === 'width') return `(${getEl}?.offsetWidth||0)`;
-                if (ex === 'height') return `(${getEl}?.offsetHeight||0)`;
-                if (ex === 'children_count') return `(${getEl}?.children?.length||0)`;
-                if (ex === 'is_visible') return `(${getEl}? (${getEl}.offsetParent!==null && getComputedStyle(${getEl}).display!=='none' && getComputedStyle(${getEl}).visibility!=='hidden'):false)`;
-                return `(${getEl}?.value||'')`;
+                if (ex === 'text') return `(document.getElementById('${id}')?.textContent||'')`;
+                if (ex === 'checked') return `(!!document.getElementById('${id}')?.checked)`;
+                return `(document.getElementById('${id}')?.value||'')`;
             }
             return "''";
         }
@@ -4859,42 +4667,6 @@
                     return `(${L}!==''&&${L}!==null&&${L}!==undefined)`;
                 case 'is_number':
                     return `(!isNaN(parseFloat(${L}))&&isFinite(${L}))`;
-                case 'matches_regex': {
-                    const pat = String(rule.rightConst||rule.regexPattern||'');
-                    const flg = String(rule.regexFlags||'');
-                    return `(new RegExp('${escJs(pat)}','${escJs(flg)}')).test(String(${L}))`;
-                }
-                case 'not_matches_regex': {
-                    const pat = String(rule.rightConst||rule.regexPattern||'');
-                    const flg = String(rule.regexFlags||'');
-                    return `!(new RegExp('${escJs(pat)}','${escJs(flg)}')).test(String(${L}))`;
-                }
-                case 'is_email':
-                    return `/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(${L}))`;
-                case 'is_url':
-                    return `/^(https?:\\/\\/|\\/\\/)[^\\s]+$/i.test(String(${L}))`;
-                case 'is_integer':
-                    return `(/^-?\\d+$/.test(String(${L}).trim()))`;
-                case 'is_float':
-                    return `(/^-?\\d+\\.\\d+$/.test(String(${L}).trim()))`;
-                case 'is_alpha':
-                    return `(/^[A-Za-z]+$/.test(String(${L})))`;
-                case 'is_alphanumeric':
-                    return `(/^[A-Za-z0-9]+$/.test(String(${L})))`;
-                case 'is_string':
-                    return `(typeof (${L})==='string' && isNaN(parseFloat(${L})))`;
-                case 'is_boolean':
-                    return `(String(${L})==='true'||String(${L})==='false'||typeof(${L})==='boolean')`;
-                case 'length_eq':
-                    return `(String(${L}).length===parseInt(${R}||0,10))`;
-                case 'length_gt':
-                    return `(String(${L}).length>parseInt(${R}||0,10))`;
-                case 'length_lt':
-                    return `(String(${L}).length<parseInt(${R}||0,10))`;
-                case 'same_type':
-                    return `((typeof (${L}))===(typeof (${R})) && ((!isNaN(parseFloat(${L}))===!isNaN(parseFloat(${R})))))`;
-                case 'type_is':
-                    return `((typeof (${L}))===String(${R}))`;
                 default:
                     return '';
             }
@@ -5036,19 +4808,6 @@
                     if (!inner) return '';
                     return `if(!document.getElementById('${rule.sourceInput}')?.value){ ${inner} }`;
                 }
-                case 'add_elements_to': {
-                    if (!rule.targetEl || !rule.newElements || !rule.newElements.length) return '';
-                    const specs = rule.newElements.map(s => {
-                        const tag = (s.tag || 'div').replace(/[^a-zA-Z0-9]/g, '');
-                        return `{tag:'${escJs(tag)}',text:APX_interp('${escJs(s.text||'')}'),id:'${escJs(s.id||'')}',cls:'${escJs(s.className||'')}',attrs:'${escJs(s.attrs||'')}',styles:'${escJs(s.styles||'')}'}`;
-                    }).join(',');
-                    const mode = rule.insertMode || 'append';
-                    return `APX_addEls('${rule.targetEl}','${mode}',[${specs}]);`;
-                }
-                case 'clear_children':
-                    return rule.targetEl ? `{const _c=document.getElementById('${rule.targetEl}');if(_c) _c.innerHTML='';}` : '';
-                case 'remove_element':
-                    return rule.targetEl ? `document.getElementById('${rule.targetEl}')?.remove();` : '';
                 default:
                     return '';
             }
@@ -5194,7 +4953,6 @@
             js += `function APX_expr(fn){try{return fn();}catch(e){return '';}}\n`;
             js += `function APX_add(a,b){const na=parseFloat(a),nb=parseFloat(b);if(!isNaN(na)&&!isNaN(nb)&&String(a).trim()!==''&&String(b).trim()!=='')return na+nb;return String(a)+String(b);}\n`;
             js += `function APX_interp(s){return String(s).replace(/\\{([^{}]+)\\}/g,(m,e)=>{try{let js=e.replace(/sqrt\\s*\\(/g,'Math.sqrt(').replace(/([a-zA-Z_]\\w*)/g,function(x){return (x in STATE)?("STATE['"+x+"']"):x;});let r=Function('STATE','return ('+js+')')(STATE);return (r===undefined||r===null)?m:r;}catch(_){return (e in STATE)?STATE[e]:m;}});}\n`;
-            js += `function APX_addEls(parentId,mode,specs){var p=document.getElementById(parentId);if(!p)return;var host=p;if(p.classList&&p.classList.contains('apx-modal-card')===false){var card=p.querySelector('.apx-modal-card');if(card)host=card;}if(mode==='replace'){host.innerHTML='';}specs.forEach(function(s){var el=document.createElement(s.tag||'div');if(s.id)el.id=s.id;if(s.cls)el.className=s.cls;if(s.text!=null && s.text!=='')el.innerHTML=s.text;if(s.attrs){s.attrs.split(';').forEach(function(kv){var eq=kv.indexOf('=');if(eq>0){var k=kv.slice(0,eq).trim();var v=kv.slice(eq+1).trim();if(k)el.setAttribute(k,v);}else{var k2=kv.trim();if(k2)el.setAttribute(k2,'');}});}if(s.styles){try{el.style.cssText=s.styles;}catch(_){}}if(mode==='prepend'){host.insertBefore(el,host.firstChild);}else{host.appendChild(el);}});}\n`;
             js += `Object.keys(STATE).forEach(APX_sync);\n`;
             if (gs.confirmLeave) {
                 const msg = escJs(gs.confirmLeaveMessage || 'Are you sure you want to leave?');
@@ -5590,6 +5348,1133 @@
             e.preventDefault();
         }
     }, true);
+})();
+
+/* =========================================================================
+   PATCH 2 — Templates, readonly/editable, onkey, clipboard, contextmenu,
+              dock drag, var-dropdown refresh, image upload fix, math element.
+   ========================================================================= */
+(function () {
+    /* ---------- New element types ---------- */
+    const newTypes = {
+        stickytopbar: {
+            name: 'Sticky Top Bar',
+            group: 'Layout',
+            container: true,
+            icon: '<path d="M3 5h18v4H3zm0 6h18v2H3zm0 4h18v2H3z"/>'
+        },
+        ctxmenu: {
+            name: 'Context Menu',
+            group: 'Layout',
+            container: true,
+            icon: '<path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z"/>'
+        },
+        hspacer: {
+            name: 'H-Spacer',
+            group: 'Layout',
+            container: false,
+            icon: '<path d="M4 11h16v2H4z"/><path d="M3 7v10M21 7v10" stroke="currentColor" stroke-width="2" fill="none"/>'
+        },
+        navbar: {
+            name: 'Nav Bar',
+            group: 'Layout',
+            container: true,
+            icon: '<path d="M3 6h18v3H3zm5 6h13v2H8zm0 4h13v2H8zM3 12h3v6H3z"/>'
+        },
+        flexrow: {
+            name: 'Flex Row',
+            group: 'Layout',
+            container: true,
+            icon: '<path d="M3 5h4v14H3zm6 0h4v14H9zm6 0h4v14h-4z"/>'
+        },
+        flexcol: {
+            name: 'Flex Column',
+            group: 'Layout',
+            container: true,
+            icon: '<path d="M3 3h18v4H3zm0 6h18v4H3zm0 6h18v4H3z"/>'
+        },
+        hero: {
+            name: 'Hero Banner',
+            group: 'Layout',
+            container: true,
+            icon: '<path d="M3 4h18v10H3zm0 12h18v2H3zm0 4h12v2H3z"/>'
+        },
+        grid2: {
+            name: '2-Col Grid',
+            group: 'Layout',
+            container: true,
+            icon: '<path d="M3 4h8v16H3zm10 0h8v16h-8z"/>'
+        },
+        grid3: {
+            name: '3-Col Grid',
+            group: 'Layout',
+            container: true,
+            icon: '<path d="M3 4h5v16H3zm6.5 0h5v16h-5zM16 4h5v16h-5z"/>'
+        },
+        accordion: {
+            name: 'Accordion',
+            group: 'Advanced',
+            container: true,
+            icon: '<path d="M3 5h18v3H3zm0 5h18v3H3zm0 5h18v3H3z"/>'
+        },
+        math: {
+            name: 'Math Expression',
+            group: 'Advanced',
+            container: false,
+            icon: '<path d="M12 2L8 10h8L12 2zm0 20l4-8H8l4 8zM2 12l8-4v8L2 12zm20 0l-8 4v-8l8 4z"/>'
+        }
+    };
+    Object.assign(elementTypes, newTypes);
+
+    /* ---------- Math token operators / sizes ---------- */
+    const mathTokenTypes = [
+        { value: 'num', label: 'Number / Text' },
+        { value: 'op', label: 'Operator' },
+        { value: 'var', label: 'Variable {name}' },
+        { value: 'frac', label: 'Fraction (a/b)' },
+        { value: 'sup', label: 'Superscript (a^b)' },
+        { value: 'sub', label: 'Subscript (a_b)' },
+        { value: 'sqrt', label: 'Square root √a' },
+        { value: 'paren', label: 'Parentheses ( )' },
+        { value: 'space', label: 'Space' }
+    ];
+    const mathOpChoices = [
+        { value: '+', label: '+ Plus' },
+        { value: '-', label: '− Minus' },
+        { value: '×', label: '× Times' },
+        { value: '·', label: '· Dot' },
+        { value: '÷', label: '÷ Divide' },
+        { value: '/', label: '/ Slash' },
+        { value: '=', label: '= Equals' },
+        { value: '≠', label: '≠ Not Equal' },
+        { value: '<', label: '< Less' },
+        { value: '>', label: '> Greater' },
+        { value: '≤', label: '≤ Less or Equal' },
+        { value: '≥', label: '≥ Greater or Equal' },
+        { value: '±', label: '± Plus-Minus' },
+        { value: '∞', label: '∞ Infinity' },
+        { value: 'π', label: 'π Pi' },
+        { value: '∑', label: '∑ Sum' },
+        { value: '∫', label: '∫ Integral' },
+        { value: '∂', label: '∂ Partial' },
+        { value: '→', label: '→ Arrow' },
+        { value: '⇒', label: '⇒ Implies' }
+    ];
+
+    /* ---------- Default tokens for math ---------- */
+    function defaultMathTokens() {
+        return [
+            { type: 'num', text: 'a', size: '1.2rem' },
+            { type: 'op', op: '+', size: '1.2rem' },
+            { type: 'num', text: 'b', size: '1.2rem' },
+            { type: 'op', op: '=', size: '1.2rem' },
+            { type: 'sqrt', inner: 'c²', size: '1.2rem' }
+        ];
+    }
+
+    /* ---------- Wrap createElement to add new types ---------- */
+    const _origCreateElement = createElement;
+    // eslint-disable-next-line no-global-assign
+    createElement = function (type) {
+        if (newTypes[type]) {
+            const o = {
+                id: generateId('el'),
+                type,
+                styles: { ...defaultStyles },
+                children: [],
+                logic: []
+            };
+            switch (type) {
+                case 'stickytopbar':
+                    o.styles.position = 'sticky';
+                    o.styles.top = '0';
+                    o.styles.zIndex = '100';
+                    o.styles.padding = '12px 20px';
+                    o.styles.bgColor = '#ffffff';
+                    o.styles.boxShadow = '0 2px 8px rgba(0,0,0,.08)';
+                    o.styles.border = '1px solid #e5e7eb';
+                    o.styles.display = 'flex';
+                    o.styles.alignItems = 'center';
+                    o.styles.gap = '12px';
+                    o.styles.minHeight = '50px';
+                    break;
+                case 'ctxmenu':
+                    o.styles.position = 'absolute';
+                    o.styles.display = 'none';
+                    o.styles.bgColor = '#ffffff';
+                    o.styles.padding = '6px 0';
+                    o.styles.borderRadius = '8px';
+                    o.styles.boxShadow = '0 8px 24px rgba(0,0,0,.18)';
+                    o.styles.border = '1px solid #e5e7eb';
+                    o.styles.minWidth = '180px';
+                    o.styles.zIndex = '9000';
+                    o.contextTarget = '';
+                    break;
+                case 'hspacer':
+                    o.styles.width = '24px';
+                    o.styles.display = 'inline-block';
+                    break;
+                case 'navbar':
+                    o.styles.display = 'flex';
+                    o.styles.justifyContent = 'space-between';
+                    o.styles.alignItems = 'center';
+                    o.styles.padding = '14px 22px';
+                    o.styles.bgColor = '#0f172a';
+                    o.styles.color = '#ffffff';
+                    o.styles.gap = '14px';
+                    o.styles.minHeight = '60px';
+                    break;
+                case 'flexrow':
+                    o.styles.display = 'flex';
+                    o.styles.flexDirection = 'row';
+                    o.styles.gap = '12px';
+                    o.styles.padding = '8px';
+                    o.styles.minHeight = '60px';
+                    o.styles.border = '1px dashed rgba(99,102,241,.35)';
+                    o.styles.borderRadius = '8px';
+                    break;
+                case 'flexcol':
+                    o.styles.display = 'flex';
+                    o.styles.flexDirection = 'column';
+                    o.styles.gap = '12px';
+                    o.styles.padding = '8px';
+                    o.styles.minHeight = '80px';
+                    o.styles.border = '1px dashed rgba(99,102,241,.35)';
+                    o.styles.borderRadius = '8px';
+                    break;
+                case 'hero':
+                    o.styles.padding = '60px 30px';
+                    o.styles.bgGradient = 'linear-gradient(135deg,#6366f1,#8b5cf6)';
+                    o.styles.color = '#ffffff';
+                    o.styles.borderRadius = '12px';
+                    o.styles.textAlign = 'center';
+                    o.styles.minHeight = '200px';
+                    break;
+                case 'grid2':
+                    o.styles.display = 'grid';
+                    o.styles.gridCols = '2';
+                    o.styles.gap = '16px';
+                    o.styles.padding = '12px';
+                    o.styles.minHeight = '100px';
+                    o.styles.border = '1px dashed rgba(99,102,241,.35)';
+                    o.styles.borderRadius = '8px';
+                    break;
+                case 'grid3':
+                    o.styles.display = 'grid';
+                    o.styles.gridCols = '3';
+                    o.styles.gap = '16px';
+                    o.styles.padding = '12px';
+                    o.styles.minHeight = '100px';
+                    o.styles.border = '1px dashed rgba(99,102,241,.35)';
+                    o.styles.borderRadius = '8px';
+                    break;
+                case 'accordion':
+                    o.accordionTitle = 'Click to expand';
+                    o.accordionOpen = false;
+                    o.styles.padding = '10px 14px';
+                    o.styles.bgColor = '#f8fafc';
+                    o.styles.borderRadius = '8px';
+                    o.styles.border = '1px solid #e5e7eb';
+                    o.styles.minHeight = '50px';
+                    break;
+                case 'math':
+                    o.mathTokens = defaultMathTokens();
+                    o.styles.display = 'inline-block';
+                    o.styles.fontFamily = "'Cambria Math', 'Latin Modern Math', Georgia, serif";
+                    o.styles.padding = '4px 8px';
+                    break;
+            }
+            return o;
+        }
+        return _origCreateElement(type);
+    };
+
+    /* ---------- Math token → HTML ---------- */
+    function mathTokenToHtml(t) {
+        const sz = t.size ? `font-size:${escHtml(t.size)};` : '';
+        const sty = `style="${sz}display:inline-block;vertical-align:middle;margin:0 2px"`;
+        switch (t.type) {
+            case 'num':
+                return `<span ${sty}>${escHtml(t.text || '')}</span>`;
+            case 'op':
+                return `<span ${sty}>${escHtml(t.op || '+')}</span>`;
+            case 'var':
+                return `<span ${sty} data-apx-bind="${escHtml(t.name || '')}">${escHtml(t.name || '')}</span>`;
+            case 'frac':
+                return `<span style="display:inline-flex;flex-direction:column;align-items:center;${sz}vertical-align:middle;line-height:1;margin:0 3px"><span style="border-bottom:1px solid currentColor;padding:0 4px">${escHtml(t.num || '')}</span><span style="padding:0 4px">${escHtml(t.den || '')}</span></span>`;
+            case 'sup':
+                return `<span ${sty}>${escHtml(t.base || '')}<sup style="font-size:.7em">${escHtml(t.exp || '')}</sup></span>`;
+            case 'sub':
+                return `<span ${sty}>${escHtml(t.base || '')}<sub style="font-size:.7em">${escHtml(t.exp || '')}</sub></span>`;
+            case 'sqrt':
+                return `<span ${sty} >√<span style="border-top:1px solid currentColor;padding:0 3px">${escHtml(t.inner || '')}</span></span>`;
+            case 'paren':
+                return `<span ${sty}>(${escHtml(t.inner || '')})</span>`;
+            case 'space':
+                return `<span style="display:inline-block;width:${escHtml(t.size || '.5em')}"></span>`;
+        }
+        return '';
+    }
+    function mathTokensToHtml(tokens) {
+        return (tokens || []).map(mathTokenToHtml).join('');
+    }
+
+    /* ---------- Wrap processElementHtml to add new types ---------- */
+    const _origProcHtml = processElementHtml;
+    // eslint-disable-next-line no-global-assign
+    processElementHtml = function (el) {
+        let inner = '';
+        if (el.children) el.children.forEach(c => inner += processElementHtml(c));
+        const id = el.id;
+        const extra = el.editable ? ' contenteditable="true"' : '';
+        const ro = el.readonly ? ' readonly' : '';
+        switch (el.type) {
+            case 'stickytopbar':
+                return `<div id="${id}"${extra}>\n${inner}</div>\n`;
+            case 'ctxmenu':
+                return `<div id="${id}" role="menu" data-apx-ctxmenu="${escHtml(el.contextTarget || '')}">\n${inner}</div>\n`;
+            case 'hspacer':
+                return `<span id="${id}" aria-hidden="true"></span>\n`;
+            case 'navbar':
+                return `<nav id="${id}"${extra}>\n${inner}</nav>\n`;
+            case 'flexrow':
+            case 'flexcol':
+            case 'hero':
+            case 'grid2':
+            case 'grid3':
+                return `<div id="${id}"${extra}>\n${inner}</div>\n`;
+            case 'accordion':
+                return `<div id="${id}" data-apx-acc="${el.accordionOpen ? '1' : '0'}">\n  <div class="apx-acc-head" style="cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px"><span class="apx-acc-caret" style="transition:transform .2s;display:inline-block">▶</span>${escHtml(el.accordionTitle || 'Section')}</div>\n  <div class="apx-acc-body" style="overflow:hidden;max-height:${el.accordionOpen ? 'none' : '0'};transition:max-height .25s ease;padding-top:${el.accordionOpen ? '10px' : '0'}">\n${inner}\n  </div>\n</div>\n`;
+            case 'math':
+                return `<span id="${id}"${extra}>${mathTokensToHtml(el.mathTokens)}</span>\n`;
+        }
+        // For existing types, modify based on editable/readonly flags
+        let out = _origProcHtml(el);
+        if (el.editable && ['div', 'section', 'card', 'heading', 'text', 'span', 'blockquote', 'code', 'badge', 'label'].includes(el.type)) {
+            out = out.replace(/^<(\w+)\s+id="([^"]+)"/, '<$1 id="$2" contenteditable="true"');
+        }
+        if (el.readonly && (el.type === 'input' || el.type === 'textarea')) {
+            out = out.replace(/^<(input|textarea)\s+id="([^"]+)"/, '<$1 id="$2" readonly');
+        }
+        return out;
+    };
+
+    /* ---------- Wrap processElementCss for grid columns + accordion init ---------- */
+    const _origProcCss = processElementCss;
+    // eslint-disable-next-line no-global-assign
+    processElementCss = function (el) {
+        let extra = '';
+        if (el.type === 'grid2' || el.type === 'grid3') {
+            const cols = el.styles.gridCols || (el.type === 'grid2' ? '2' : '3');
+            extra += `#${el.id}{grid-template-columns:repeat(${cols},minmax(0,1fr));}\n`;
+        }
+        if (el.type === 'ctxmenu') {
+            extra += `#${el.id}{position:absolute !important;}\n#${el.id}.apx-ctx-show{display:block !important;}\n`;
+        }
+        return extra + _origProcCss(el);
+    };
+
+    /* ---------- Add new logic events ---------- */
+    if (!logicEvents.find(e => e.value === 'onkey')) {
+        logicEvents.push({ value: 'onkey', label: '⌨ On Key Combo (key + ctrl/alt/shift)' });
+    }
+    // Update right-click label since we'll now also handle mobile long-press
+    const ctxEv = logicEvents.find(e => e.value === 'contextmenu');
+    if (ctxEv) ctxEv.label = 'On Right-Click / Long-Press (mobile)';
+
+    /* ---------- Add new logic actions ---------- */
+    const newActions = [
+        { value: 'backspace_input', label: '⌫ Backspace Input (N chars or all)', group: 'Text' },
+        { value: 'write_clipboard', label: '📋 Write to Clipboard (text/expr)', group: 'Misc' },
+        { value: 'read_clipboard', label: '📋 Read Clipboard → Variable', group: 'Misc' },
+        { value: 'prevent_default', label: '🚫 Prevent Default Event', group: 'Misc' },
+        { value: 'show_ctxmenu', label: '☰ Show Context Menu at Pointer', group: 'Modal' },
+        { value: 'hide_ctxmenu', label: '☰ Hide Context Menu', group: 'Modal' },
+        { value: 'toggle_accordion', label: '▶ Toggle Accordion', group: 'Style' }
+    ];
+    newActions.forEach(a => {
+        if (!logicActions.find(x => x.value === a.value)) logicActions.push(a);
+    });
+    // Also extend innerActionList
+    newActions.forEach(a => {
+        if (!innerActionList.find(x => x.value === a.value)) innerActionList.push(a);
+    });
+
+    /* ---------- Key list for onkey ---------- */
+    const keyChoices = (() => {
+        const arr = [];
+        'abcdefghijklmnopqrstuvwxyz'.split('').forEach(c => arr.push({ value: c, label: c.toUpperCase() + ' (' + c + ')' }));
+        '0123456789'.split('').forEach(c => arr.push({ value: c, label: c }));
+        const named = ['Enter', 'Escape', 'Backspace', 'Tab', 'Delete', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', ' ', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12', ',', '.', '/', '\\', ';', '\'', '`', '-', '=', '[', ']', '+', '*'];
+        named.forEach(k => arr.push({ value: k, label: k === ' ' ? 'Space' : k }));
+        return arr;
+    })();
+
+    /* ---------- Patch buildActionParams for new actions + onkey event ---------- */
+    const _origBuildActionParams = buildActionParams;
+    // eslint-disable-next-line no-global-assign
+    buildActionParams = function (parent, rule, opts, isInner = false, setKey = null) {
+        const a = rule.action;
+        if (!a) {
+            return _origBuildActionParams(parent, rule, opts, isInner, setKey);
+        }
+        const set = setKey || ((k, v) => { rule[k] = v; });
+        const pRow = (label, node) => {
+            const g = document.createElement('div');
+            g.className = 'setting-group';
+            const l = document.createElement('label');
+            l.textContent = label;
+            g.appendChild(l);
+            g.appendChild(node);
+            return g;
+        };
+        const txt = (val, onCh, ph = '', type = 'text') => {
+            const i = document.createElement('input');
+            i.type = type;
+            i.value = val || '';
+            i.placeholder = ph;
+            i.oninput = e => { onCh(e.target.value); updateCode(); };
+            return i;
+        };
+        if (a === 'backspace_input') {
+            parent.innerHTML = '';
+            const r1 = document.createElement('div');
+            r1.className = 'row';
+            r1.appendChild(pRow('Target Input', createSelect(opts.textInputOpts.length ? opts.textInputOpts : [{ value: '', label: 'No inputs' }], rule.targetEl, v => { set('targetEl', v); updateCode(); })));
+            r1.appendChild(pRow('Mode', createSelect([
+                { value: '1', label: 'Backspace 1 char' },
+                { value: 'n', label: 'Backspace N chars' },
+                { value: 'all', label: 'Erase ALL' }
+            ], rule.bsMode || '1', v => { set('bsMode', v); updateCode(); renderLogicRules(activeLogicId === null ? bodyLogic : deepFind(activeLogicId).item.logic); })));
+            parent.appendChild(r1);
+            if (rule.bsMode === 'n') {
+                parent.appendChild(pRow('How many chars (N)', txt(rule.bsCount, v => set('bsCount', v), '3', 'number')));
+            }
+            return;
+        }
+        if (a === 'write_clipboard') {
+            parent.innerHTML = '';
+            parent.appendChild(pRow('Text / {expr} to copy', txt(rule.textValue, v => set('textValue', v), 'Hello {name}!')));
+            const t = document.createElement('div');
+            t.style.cssText = 'font-size:.74rem;color:var(--text-mute);background:rgba(99,102,241,.06);border:1px dashed rgba(99,102,241,.25);padding:7px 10px;border-radius:6px;line-height:1.45';
+            t.textContent = 'Writes directly to system clipboard (no field needed). Supports {variables} and math like {a}+{b}.';
+            parent.appendChild(t);
+            return;
+        }
+        if (a === 'read_clipboard') {
+            parent.innerHTML = '';
+            parent.appendChild(pRow('Save Clipboard To Variable', createSelect(opts.varOpts.length ? opts.varOpts : [{ value: '', label: 'No vars' }], rule.varName, v => { set('varName', v); updateCode(); })));
+            return;
+        }
+        if (a === 'prevent_default') {
+            parent.innerHTML = '<div class="logic-params-empty">Prevents the default browser action for this event (e.g. stops form submit / context menu).</div>';
+            return;
+        }
+        if (a === 'show_ctxmenu') {
+            parent.innerHTML = '';
+            const all = opts.all || collectAll();
+            const ctxOpts = all.filter(e => e.type === 'ctxmenu').map(e => ({ value: e.id, label: `${e.id} (Context Menu)` }));
+            parent.appendChild(pRow('Context Menu', createSelect(ctxOpts.length ? ctxOpts : [{ value: '', label: 'No context menus' }], rule.targetEl, v => { set('targetEl', v); updateCode(); })));
+            return;
+        }
+        if (a === 'hide_ctxmenu') {
+            parent.innerHTML = '';
+            const all = opts.all || collectAll();
+            const ctxOpts = all.filter(e => e.type === 'ctxmenu').map(e => ({ value: e.id, label: `${e.id} (Context Menu)` }));
+            parent.appendChild(pRow('Context Menu (or empty = all)', createSelect([{ value: '', label: '(All open menus)' }].concat(ctxOpts), rule.targetEl, v => { set('targetEl', v); updateCode(); })));
+            return;
+        }
+        if (a === 'toggle_accordion') {
+            parent.innerHTML = '';
+            const all = opts.all || collectAll();
+            const accOpts = all.filter(e => e.type === 'accordion').map(e => ({ value: e.id, label: `${e.id} (Accordion)` }));
+            parent.appendChild(pRow('Accordion', createSelect(accOpts.length ? accOpts : [{ value: '', label: 'No accordions' }], rule.targetEl, v => { set('targetEl', v); updateCode(); })));
+            return;
+        }
+        // fall through to original
+        return _origBuildActionParams(parent, rule, opts, isInner, setKey);
+    };
+
+    /* ---------- Patch buildLogicRow to add onkey key-combo selectors ---------- */
+    const _origBuildLogicRow = buildLogicRow;
+    // eslint-disable-next-line no-global-assign
+    buildLogicRow = function (rule, idx, arr) {
+        const row = _origBuildLogicRow(rule, idx, arr);
+        if (rule.event === 'onkey') {
+            // Insert key-combo selector after the trigger event column
+            const bodyDiv = row.querySelector('.logic-row-body');
+            if (bodyDiv && !bodyDiv.querySelector('.apx-onkey-wrap')) {
+                const wrap = document.createElement('div');
+                wrap.className = 'apx-onkey-wrap';
+                wrap.style.cssText = 'grid-column:1/-1;background:rgba(99,102,241,.06);border:1px dashed rgba(99,102,241,.25);padding:8px;border-radius:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px';
+                const keyG = document.createElement('div');
+                keyG.className = 'setting-group';
+                keyG.innerHTML = '<label>Key</label>';
+                keyG.appendChild(createSelect(keyChoices, rule.keyChar || '', v => { rule.keyChar = v; updateCode(); }, 'Pick or search a key…'));
+                wrap.appendChild(keyG);
+                const modWrap = document.createElement('div');
+                modWrap.className = 'setting-group';
+                modWrap.innerHTML = '<label>Modifiers</label>';
+                const modRow = document.createElement('div');
+                modRow.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 4px;font-size:.8rem';
+                ['ctrl', 'alt', 'shift', 'meta'].forEach(m => {
+                    const lbl = document.createElement('label');
+                    lbl.style.cssText = 'display:inline-flex;align-items:center;gap:5px;cursor:pointer';
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.checked = !!rule['mod_' + m];
+                    cb.onchange = () => { rule['mod_' + m] = cb.checked; updateCode(); };
+                    lbl.appendChild(cb);
+                    lbl.appendChild(document.createTextNode(m.charAt(0).toUpperCase() + m.slice(1)));
+                    modRow.appendChild(lbl);
+                });
+                const lblPd = document.createElement('label');
+                lblPd.style.cssText = 'display:inline-flex;align-items:center;gap:5px;cursor:pointer;margin-left:auto';
+                const cbPd = document.createElement('input');
+                cbPd.type = 'checkbox';
+                cbPd.checked = rule.preventDefault !== false;
+                cbPd.onchange = () => { rule.preventDefault = cbPd.checked; updateCode(); };
+                lblPd.appendChild(cbPd);
+                lblPd.appendChild(document.createTextNode('preventDefault'));
+                modRow.appendChild(lblPd);
+                modWrap.appendChild(modRow);
+                wrap.appendChild(modWrap);
+                bodyDiv.appendChild(wrap);
+            }
+        }
+        return row;
+    };
+
+    /* ---------- Patch actionToJs for new actions ---------- */
+    const _origActionToJs = actionToJs;
+    // eslint-disable-next-line no-global-assign
+    actionToJs = function (rule, hostId) {
+        const target = rule.targetEl || hostId;
+        const targetStr = target === '__body__' ? 'document.body' : `document.getElementById('${target}')`;
+        switch (rule.action) {
+            case 'backspace_input': {
+                if (!rule.targetEl) return '';
+                const mode = rule.bsMode || '1';
+                if (mode === 'all') return `if(${targetStr}) ${targetStr}.value='';`;
+                if (mode === 'n') {
+                    const n = parseInt(rule.bsCount || '1', 10) || 1;
+                    return `if(${targetStr}){const _e=${targetStr};_e.value=String(_e.value||'').slice(0,Math.max(0,_e.value.length-${n}));}`;
+                }
+                return `if(${targetStr}){const _e=${targetStr};_e.value=String(_e.value||'').slice(0,-1);}`;
+            }
+            case 'write_clipboard':
+                return `(()=>{try{navigator.clipboard.writeText(APX_interp('${escJs(rule.textValue || '')}'));}catch(e){const _t=document.createElement('textarea');_t.value=APX_interp('${escJs(rule.textValue || '')}');document.body.appendChild(_t);_t.select();document.execCommand('copy');_t.remove();}})();`;
+            case 'read_clipboard':
+                return rule.varName ? `(async()=>{try{STATE['${rule.varName}']=await navigator.clipboard.readText();APX_sync('${rule.varName}');}catch(e){console.warn('Clipboard read failed',e);}})();` : '';
+            case 'prevent_default':
+                return `if(event&&event.preventDefault) event.preventDefault();`;
+            case 'show_ctxmenu':
+                if (!rule.targetEl) return '';
+                return `(()=>{const _m=document.getElementById('${rule.targetEl}');if(!_m)return;document.querySelectorAll('[data-apx-ctxmenu]').forEach(x=>x.classList.remove('apx-ctx-show'));_m.classList.add('apx-ctx-show');const _ev=event;if(_ev){const _x=(_ev.clientX!==undefined?_ev.clientX:(_ev.touches&&_ev.touches[0]?_ev.touches[0].clientX:0));const _y=(_ev.clientY!==undefined?_ev.clientY:(_ev.touches&&_ev.touches[0]?_ev.touches[0].clientY:0));_m.style.left=(_x+window.scrollX)+'px';_m.style.top=(_y+window.scrollY)+'px';if(_ev.preventDefault)_ev.preventDefault();}})();`;
+            case 'hide_ctxmenu':
+                if (rule.targetEl) return `document.getElementById('${rule.targetEl}')?.classList.remove('apx-ctx-show');`;
+                return `document.querySelectorAll('[data-apx-ctxmenu]').forEach(x=>x.classList.remove('apx-ctx-show'));`;
+            case 'toggle_accordion':
+                if (!rule.targetEl) return '';
+                return `(()=>{const _a=document.getElementById('${rule.targetEl}');if(!_a)return;const _b=_a.querySelector('.apx-acc-body');const _c=_a.querySelector('.apx-acc-caret');const _open=_a.dataset.apxAcc==='1';_a.dataset.apxAcc=_open?'0':'1';if(_b){_b.style.maxHeight=_open?'0':(_b.scrollHeight+'px');_b.style.paddingTop=_open?'0':'10px';}if(_c){_c.style.transform=_open?'rotate(0deg)':'rotate(90deg)';}})();`;
+        }
+        return _origActionToJs(rule, hostId);
+    };
+
+    /* ---------- Patch wrapEvent for onkey + mobile contextmenu ---------- */
+    const _origWrapEvent = wrapEvent;
+    // eslint-disable-next-line no-global-assign
+    wrapEvent = function (ev, ref, inner, isBody = false) {
+        if (ev === 'onkey') {
+            // The rule object isn't passed here; we encode the key/modifier check at the call site via a marker.
+            // We'll re-route this from ruleToHandlerJs (see patch below).
+            return _origWrapEvent(ev, ref, inner, isBody);
+        }
+        if (ev === 'contextmenu') {
+            // Add touchstart long-press handler in addition to native contextmenu
+            const target = isBody ? 'document.body' : ref;
+            return `(()=>{const _el=${target};if(!_el)return;_el.addEventListener('contextmenu',(event)=>{ ${inner} });let _tt=null,_tx=0,_ty=0;_el.addEventListener('touchstart',(event)=>{const _t=event.touches&&event.touches[0];if(!_t)return;_tx=_t.clientX;_ty=_t.clientY;_tt=setTimeout(()=>{event.clientX=_tx;event.clientY=_ty;${inner}},550);},{passive:true});['touchend','touchcancel','touchmove'].forEach(e=>_el.addEventListener(e,()=>{if(_tt){clearTimeout(_tt);_tt=null;}},{passive:true}));})();\n`;
+        }
+        return _origWrapEvent(ev, ref, inner, isBody);
+    };
+
+    /* ---------- Patch ruleToHandlerJs to emit onkey listener ---------- */
+    const _origRuleToHandlerJs = ruleToHandlerJs;
+    // eslint-disable-next-line no-global-assign
+    ruleToHandlerJs = function (rule, hostId) {
+        if (rule.event === 'onkey') {
+            const inner = actionToJs(rule, hostId);
+            if (!inner) return '';
+            const elRef = hostId === '__body__' ? 'document.body' : `document.getElementById('${hostId}')`;
+            const k = rule.keyChar || '';
+            if (!k) return '';
+            const checks = [];
+            checks.push(`(event.ctrlKey===${!!rule.mod_ctrl})`);
+            checks.push(`(event.altKey===${!!rule.mod_alt})`);
+            checks.push(`(event.shiftKey===${!!rule.mod_shift})`);
+            checks.push(`(event.metaKey===${!!rule.mod_meta})`);
+            // Match key: for single chars compare case-insensitive, for named keys compare as-is
+            let keyCheck;
+            if (k.length === 1) keyCheck = `(String(event.key).toLowerCase()==='${escJs(k.toLowerCase())}')`;
+            else if (k === ' ') keyCheck = `(event.key===' '||event.code==='Space')`;
+            else keyCheck = `(event.key==='${escJs(k)}')`;
+            checks.push(keyCheck);
+            const pd = rule.preventDefault !== false ? 'event.preventDefault();' : '';
+            const body = `if(${checks.join('&&')}){${pd} ${inner} }`;
+            if (hostId === '__body__') {
+                return `document.addEventListener('keydown',(event)=>{ ${body} });\n`;
+            }
+            return `${elRef}?.addEventListener('keydown',(event)=>{ ${body} });\n`;
+        }
+        return _origRuleToHandlerJs(rule, hostId);
+    };
+
+    /* ---------- Bug-fix: refresh logic rules when variables change ---------- */
+    function refreshLogicIfOpen() {
+        const modal = document.getElementById('modal-logic');
+        const gModal = document.getElementById('modal-global');
+        if (modal && modal.classList.contains('active')) {
+            const arr = activeLogicId === null ? bodyLogic : (deepFind(activeLogicId) || {}).item?.logic;
+            if (arr) renderLogicRules(arr);
+        }
+        if (gModal && gModal.classList.contains('active')) {
+            renderBodyLogic();
+        }
+    }
+    // Wrap renderVariables to also refresh logic
+    const _origRenderVariables = renderVariables;
+    // eslint-disable-next-line no-global-assign
+    renderVariables = function () {
+        const r = _origRenderVariables.apply(this, arguments);
+        refreshLogicIfOpen();
+        return r;
+    };
+    // Patch the Add Var button (re-bind cleanly to also refresh logic)
+    const addVarBtn = document.getElementById('btn-add-var');
+    if (addVarBtn) {
+        addVarBtn.onclick = () => {
+            let n = 'myVar', i = 1;
+            while (variables.find(v => v.name === n)) n = 'myVar' + (++i);
+            variables.push({ name: n, value: '0' });
+            snapshot();
+            renderVariables();
+            updateCode();
+            refreshLogicIfOpen();
+        };
+    }
+
+    /* ---------- Bug-fix: image / video / audio upload — store as uploadedSrc,
+                ignore URL field while in upload mode, display friendly label ---------- */
+    // Override buildMediaSource entirely (its old behavior conflated url and upload into el.src)
+    // eslint-disable-next-line no-global-assign
+    buildMediaSource = function (el, label, accept) {
+        // Migrate old `src` data-url into uploadedSrc if needed
+        if (el.mediaMode === 'upload' && el.src && !el.uploadedSrc) {
+            el.uploadedSrc = el.src;
+            el.uploadedName = el.uploadedName || 'Uploaded image';
+        }
+        if (el.mediaMode !== 'upload' && el.src && !el.urlSrc) {
+            el.urlSrc = el.src;
+        }
+        // Keep src up to date based on mode
+        const syncSrc = () => {
+            el.src = (el.mediaMode === 'upload') ? (el.uploadedSrc || '') : (el.urlSrc || '');
+        };
+        syncSrc();
+
+        const wrap = document.createElement('div');
+        wrap.className = 'media-source';
+        const cur = document.createElement('div');
+        cur.className = 'media-current';
+        const updCur = () => {
+            if (el.mediaMode === 'upload') {
+                if (el.uploadedSrc) {
+                    const kb = Math.round((el.uploadedSrc.length * 0.75) / 1024);
+                    cur.textContent = '📎 ' + (el.uploadedName || 'Uploaded image') + ' (' + kb + ' KB) — link will be ignored';
+                } else {
+                    cur.textContent = 'No file uploaded yet';
+                }
+            } else {
+                cur.textContent = el.urlSrc ? ('Current: ' + (el.urlSrc.length > 60 ? el.urlSrc.slice(0, 60) + '…' : el.urlSrc)) : 'No source set';
+            }
+        };
+        const tabs = document.createElement('div');
+        tabs.className = 'mtabs';
+        const tUrl = document.createElement('button');
+        tUrl.className = 'mtab' + (el.mediaMode !== 'upload' ? ' active' : '');
+        tUrl.textContent = 'Link URL';
+        const tUp = document.createElement('button');
+        tUp.className = 'mtab' + (el.mediaMode === 'upload' ? ' active' : '');
+        tUp.textContent = 'Upload';
+        tabs.appendChild(tUrl);
+        tabs.appendChild(tUp);
+
+        const pUrl = document.createElement('div');
+        pUrl.className = 'mpane' + (el.mediaMode !== 'upload' ? ' active' : '');
+        const urlInp = document.createElement('input');
+        urlInp.type = 'text';
+        urlInp.placeholder = el.mediaMode === 'upload' ? 'Ignored while file is uploaded' : 'https://…';
+        urlInp.value = el.urlSrc || '';
+        urlInp.disabled = (el.mediaMode === 'upload');
+        urlInp.oninput = e => {
+            el.urlSrc = e.target.value;
+            if (el.mediaMode !== 'upload') {
+                el.src = el.urlSrc;
+                updCur();
+                updateCode();
+            }
+        };
+        pUrl.appendChild(urlInp);
+        if (el.mediaMode === 'upload') {
+            const note = document.createElement('div');
+            note.style.cssText = 'font-size:.72rem;color:var(--text-mute);margin-top:6px';
+            note.textContent = 'URL is currently ignored because you uploaded a file. Switch tab to "Link URL" and clear/replace if you want to use a link instead.';
+            pUrl.appendChild(note);
+        }
+
+        const pUp = document.createElement('div');
+        pUp.className = 'mpane' + (el.mediaMode === 'upload' ? ' active' : '');
+        const fileInp = document.createElement('input');
+        fileInp.type = 'file';
+        if (accept) fileInp.accept = accept;
+        fileInp.onchange = e => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const rd = new FileReader();
+            rd.onload = ev => {
+                el.mediaMode = 'upload';
+                el.uploadedSrc = ev.target.result;
+                el.uploadedName = f.name || 'Uploaded image';
+                syncSrc();
+                urlInp.disabled = true;
+                urlInp.placeholder = 'Ignored while file is uploaded';
+                updCur();
+                updateCode();
+                toast('Media embedded — link ignored', 'success');
+            };
+            rd.readAsDataURL(f);
+        };
+        pUp.appendChild(fileInp);
+        if (el.mediaMode === 'upload' && el.uploadedSrc) {
+            const clear = document.createElement('button');
+            clear.type = 'button';
+            clear.className = 'btn-icon danger';
+            clear.style.cssText = 'margin-top:8px;width:auto;padding:4px 10px;font-size:.78rem';
+            clear.textContent = '✕ Remove uploaded file';
+            clear.onclick = () => {
+                el.uploadedSrc = '';
+                el.uploadedName = '';
+                el.mediaMode = 'url';
+                syncSrc();
+                urlInp.disabled = false;
+                urlInp.placeholder = 'https://…';
+                tUrl.click();
+                updCur();
+                updateCode();
+            };
+            pUp.appendChild(clear);
+        }
+
+        tUrl.onclick = () => {
+            tUrl.classList.add('active');
+            tUp.classList.remove('active');
+            pUrl.classList.add('active');
+            pUp.classList.remove('active');
+            el.mediaMode = 'url';
+            urlInp.disabled = false;
+            urlInp.placeholder = 'https://…';
+            syncSrc();
+            updCur();
+            updateCode();
+        };
+        tUp.onclick = () => {
+            tUp.classList.add('active');
+            tUrl.classList.remove('active');
+            pUp.classList.add('active');
+            pUrl.classList.remove('active');
+        };
+        wrap.appendChild(tabs);
+        wrap.appendChild(pUrl);
+        wrap.appendChild(pUp);
+        wrap.appendChild(cur);
+        updCur();
+        const g = document.createElement('div');
+        g.className = 'setting-group';
+        g.dataset.search = label.toLowerCase();
+        const l = document.createElement('label');
+        l.textContent = label;
+        g.appendChild(l);
+        g.appendChild(wrap);
+        return g;
+    };
+
+    /* ---------- Extend openSettings: readonly toggle, contenteditable toggle,
+                 math token editor, accordion props, grid cols, ctxmenu target ---------- */
+    const _origOpenSettings = openSettings;
+    // eslint-disable-next-line no-global-assign
+    openSettings = function (id) {
+        _origOpenSettings(id);
+        const r = deepFind(id);
+        if (!r) return;
+        const el = r.item;
+        const form = document.getElementById('settings-form');
+
+        // Helpers
+        const mkSection = (title) => {
+            const s = document.createElement('div');
+            s.className = 'section-title';
+            s.textContent = title;
+            s.dataset.search = '__' + title.toLowerCase();
+            form.appendChild(s);
+            const g = document.createElement('div');
+            g.className = 'settings-grid';
+            form.appendChild(g);
+            return g;
+        };
+        const addGrpL = (g, label, node) => {
+            const x = document.createElement('div');
+            x.className = 'setting-group';
+            x.dataset.search = label.toLowerCase();
+            const lbl = document.createElement('label');
+            lbl.textContent = label;
+            x.appendChild(lbl);
+            x.appendChild(node);
+            g.appendChild(x);
+        };
+        const mkYesNo = (val, onCh) => createSelect([{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }], String(!!val), v => { onCh(v === 'true'); updateCode(); });
+
+        // Readonly toggle for input/textarea
+        if (el.type === 'input' || el.type === 'textarea') {
+            const g = mkSection('Behavior');
+            addGrpL(g, 'Read-Only', mkYesNo(el.readonly, v => el.readonly = v));
+        }
+        // Editable (contenteditable) toggle for text-content elements
+        const editableTypes = ['div', 'section', 'card', 'heading', 'text', 'span', 'blockquote', 'code', 'badge', 'label', 'stickytopbar', 'navbar', 'flexrow', 'flexcol', 'hero', 'grid2', 'grid3'];
+        if (editableTypes.includes(el.type)) {
+            const g = mkSection('Editability');
+            addGrpL(g, 'Content Editable (live edit)', mkYesNo(el.editable, v => el.editable = v));
+            const tip = document.createElement('div');
+            tip.style.cssText = 'grid-column:1/-1;font-size:.74rem;color:var(--text-mute);background:rgba(99,102,241,.06);border:1px dashed rgba(99,102,241,.25);padding:7px 10px;border-radius:6px;line-height:1.45';
+            tip.textContent = 'When enabled, the element becomes contenteditable in the exported page — users can click to edit its text directly.';
+            g.appendChild(tip);
+        }
+
+        // Grid cols editor
+        if (el.type === 'grid2' || el.type === 'grid3') {
+            const g = mkSection('Grid Layout');
+            const inp = document.createElement('input');
+            inp.type = 'number';
+            inp.value = el.styles.gridCols || (el.type === 'grid2' ? '2' : '3');
+            inp.min = '1';
+            inp.max = '12';
+            inp.oninput = e => { el.styles.gridCols = e.target.value; updateCode(); };
+            addGrpL(g, 'Columns', inp);
+        }
+
+        // Accordion props
+        if (el.type === 'accordion') {
+            const g = mkSection('Accordion');
+            const inp = document.createElement('input');
+            inp.type = 'text';
+            inp.value = el.accordionTitle || '';
+            inp.oninput = e => { el.accordionTitle = e.target.value; updateCode(); };
+            addGrpL(g, 'Header Title', inp);
+            addGrpL(g, 'Initially Open', mkYesNo(el.accordionOpen, v => el.accordionOpen = v));
+        }
+
+        // Context menu target
+        if (el.type === 'ctxmenu') {
+            const g = mkSection('Context Menu');
+            const all = collectAll();
+            const targetOpts = [{ value: '', label: '(Anywhere / use Show action)' }].concat(all.filter(x => x.id !== el.id).map(x => ({ value: x.id, label: `${x.id} — ${elementTypes[x.type].name}` })));
+            addGrpL(g, 'Triggered by Element', createSelect(targetOpts, el.contextTarget || '', v => { el.contextTarget = v; updateCode(); }));
+            const tip = document.createElement('div');
+            tip.style.cssText = 'grid-column:1/-1;font-size:.74rem;color:var(--text-mute);background:rgba(99,102,241,.06);border:1px dashed rgba(99,102,241,.25);padding:7px 10px;border-radius:6px;line-height:1.45';
+            tip.textContent = 'Setting a target element makes this menu auto-open on right-click / long-press on that element. Or use a Logic rule + "Show Context Menu" action instead.';
+            g.appendChild(tip);
+        }
+
+        // Math element token editor
+        if (el.type === 'math') {
+            if (!el.mathTokens) el.mathTokens = defaultMathTokens();
+            const g = mkSection('Math Expression');
+            const list = document.createElement('div');
+            list.style.cssText = 'grid-column:1/-1;display:flex;flex-direction:column;gap:8px;padding:8px;background:rgba(99,102,241,.05);border:1px dashed rgba(99,102,241,.25);border-radius:8px';
+            const preview = document.createElement('div');
+            preview.style.cssText = 'grid-column:1/-1;padding:14px;background:#fff;color:#111;border-radius:8px;font-family:Cambria Math,Latin Modern Math,Georgia,serif;font-size:1.4rem;text-align:center;min-height:50px';
+            const renderPreview = () => { preview.innerHTML = mathTokensToHtml(el.mathTokens); };
+            const renderList = () => {
+                list.innerHTML = '';
+                el.mathTokens.forEach((t, i) => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:grid;grid-template-columns:1.2fr 2fr 90px auto auto auto;gap:6px;align-items:center;background:rgba(0,0,0,.18);padding:6px;border-radius:6px';
+                    const typeSel = createSelect(mathTokenTypes, t.type, v => { t.type = v; renderList(); renderPreview(); updateCode(); });
+                    row.appendChild(typeSel);
+                    // Per-type editors
+                    const valBox = document.createElement('div');
+                    if (t.type === 'num') {
+                        const i = document.createElement('input');
+                        i.type = 'text';
+                        i.value = t.text || '';
+                        i.placeholder = 'e.g. 2 or x';
+                        i.oninput = e => { t.text = e.target.value; renderPreview(); updateCode(); };
+                        valBox.appendChild(i);
+                    } else if (t.type === 'op') {
+                        valBox.appendChild(createSelect(mathOpChoices, t.op || '+', v => { t.op = v; renderPreview(); updateCode(); }));
+                    } else if (t.type === 'var') {
+                        const i = document.createElement('input');
+                        i.type = 'text';
+                        i.value = t.name || '';
+                        i.placeholder = 'variable name';
+                        i.oninput = e => { t.name = e.target.value.replace(/[^a-zA-Z0-9_]/g, ''); e.target.value = t.name; renderPreview(); updateCode(); };
+                        valBox.appendChild(i);
+                    } else if (t.type === 'frac') {
+                        const wr = document.createElement('div');
+                        wr.style.cssText = 'display:flex;gap:4px';
+                        const a = document.createElement('input');
+                        a.type = 'text'; a.placeholder = 'numerator'; a.value = t.num || '';
+                        a.oninput = e => { t.num = e.target.value; renderPreview(); updateCode(); };
+                        const b = document.createElement('input');
+                        b.type = 'text'; b.placeholder = 'denominator'; b.value = t.den || '';
+                        b.oninput = e => { t.den = e.target.value; renderPreview(); updateCode(); };
+                        wr.appendChild(a); wr.appendChild(b);
+                        valBox.appendChild(wr);
+                    } else if (t.type === 'sup' || t.type === 'sub') {
+                        const wr = document.createElement('div');
+                        wr.style.cssText = 'display:flex;gap:4px';
+                        const a = document.createElement('input');
+                        a.type = 'text'; a.placeholder = 'base'; a.value = t.base || '';
+                        a.oninput = e => { t.base = e.target.value; renderPreview(); updateCode(); };
+                        const b = document.createElement('input');
+                        b.type = 'text'; b.placeholder = t.type === 'sup' ? 'exponent' : 'subscript'; b.value = t.exp || '';
+                        b.oninput = e => { t.exp = e.target.value; renderPreview(); updateCode(); };
+                        wr.appendChild(a); wr.appendChild(b);
+                        valBox.appendChild(wr);
+                    } else if (t.type === 'sqrt' || t.type === 'paren') {
+                        const i = document.createElement('input');
+                        i.type = 'text';
+                        i.value = t.inner || '';
+                        i.placeholder = t.type === 'sqrt' ? 'inside √' : 'inside ( )';
+                        i.oninput = e => { t.inner = e.target.value; renderPreview(); updateCode(); };
+                        valBox.appendChild(i);
+                    } else if (t.type === 'space') {
+                        const i = document.createElement('input');
+                        i.type = 'text';
+                        i.value = t.size || '.5em';
+                        i.placeholder = 'width (e.g. .5em)';
+                        i.oninput = e => { t.size = e.target.value; renderPreview(); updateCode(); };
+                        valBox.appendChild(i);
+                    }
+                    row.appendChild(valBox);
+                    // Size
+                    if (t.type !== 'space') {
+                        const sz = document.createElement('input');
+                        sz.type = 'text';
+                        sz.value = t.size || '1.2rem';
+                        sz.placeholder = 'size';
+                        sz.title = 'Font size (e.g. 1.2rem, 2em, 24px)';
+                        sz.oninput = e => { t.size = e.target.value; renderPreview(); updateCode(); };
+                        row.appendChild(sz);
+                    } else {
+                        row.appendChild(document.createElement('div'));
+                    }
+                    // Up / Down / Delete
+                    const up = document.createElement('button');
+                    up.className = 'btn-icon';
+                    up.title = 'Move up';
+                    up.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>';
+                    up.onclick = () => { if (i > 0) { const x = el.mathTokens.splice(i, 1)[0]; el.mathTokens.splice(i - 1, 0, x); renderList(); renderPreview(); updateCode(); } };
+                    const dn = document.createElement('button');
+                    dn.className = 'btn-icon';
+                    dn.title = 'Move down';
+                    dn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>';
+                    dn.onclick = () => { if (i < el.mathTokens.length - 1) { const x = el.mathTokens.splice(i, 1)[0]; el.mathTokens.splice(i + 1, 0, x); renderList(); renderPreview(); updateCode(); } };
+                    const del = document.createElement('button');
+                    del.className = 'btn-icon danger';
+                    del.title = 'Delete';
+                    del.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+                    del.onclick = () => { el.mathTokens.splice(i, 1); renderList(); renderPreview(); updateCode(); };
+                    row.appendChild(up); row.appendChild(dn); row.appendChild(del);
+                    list.appendChild(row);
+                });
+            };
+            const insertRow = document.createElement('div');
+            insertRow.style.cssText = 'grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;padding:6px 0';
+            const mkAdd = (label, mkToken) => {
+                const b = document.createElement('button');
+                b.className = 'dock-btn';
+                b.style.cssText = 'padding:6px 10px;font-size:.78rem;width:auto';
+                b.textContent = label;
+                b.onclick = () => { el.mathTokens.push(mkToken()); renderList(); renderPreview(); updateCode(); };
+                return b;
+            };
+            const mkAddAt = (label, mkToken) => {
+                const b = document.createElement('button');
+                b.className = 'dock-btn';
+                b.style.cssText = 'padding:6px 10px;font-size:.78rem;width:auto';
+                b.textContent = '+ Insert at start: ' + label;
+                b.onclick = () => { el.mathTokens.unshift(mkToken()); renderList(); renderPreview(); updateCode(); };
+                return b;
+            };
+            insertRow.appendChild(mkAdd('+ Number', () => ({ type: 'num', text: '1', size: '1.2rem' })));
+            insertRow.appendChild(mkAdd('+ Operator', () => ({ type: 'op', op: '+', size: '1.2rem' })));
+            insertRow.appendChild(mkAdd('+ Variable', () => ({ type: 'var', name: '', size: '1.2rem' })));
+            insertRow.appendChild(mkAdd('+ Fraction', () => ({ type: 'frac', num: 'a', den: 'b', size: '1.4rem' })));
+            insertRow.appendChild(mkAdd('+ Superscript', () => ({ type: 'sup', base: 'x', exp: '2', size: '1.2rem' })));
+            insertRow.appendChild(mkAdd('+ √Sqrt', () => ({ type: 'sqrt', inner: 'x', size: '1.2rem' })));
+            insertRow.appendChild(mkAdd('+ Parens', () => ({ type: 'paren', inner: 'x+1', size: '1.2rem' })));
+            insertRow.appendChild(mkAdd('+ Space', () => ({ type: 'space', size: '.5em' })));
+            g.appendChild(preview);
+            g.appendChild(insertRow);
+            g.appendChild(list);
+            renderList();
+            renderPreview();
+            const tip = document.createElement('div');
+            tip.style.cssText = 'grid-column:1/-1;font-size:.74rem;color:var(--text-mute);background:rgba(99,102,241,.06);border:1px dashed rgba(99,102,241,.25);padding:7px 10px;border-radius:6px;line-height:1.45';
+            tip.textContent = 'Each token has its own font size. Use ↑/↓ to reorder, ✕ to delete. Variable tokens bind to STATE values via {name}.';
+            g.appendChild(tip);
+        }
+    };
+
+    /* ---------- Drag from dock: drag a new component into the canvas ---------- */
+    let draggedNewType = null;
+    window._draggedNewType = null;
+
+    // Wrap renderDock to make each button draggable
+    const _origRenderDock = renderDock;
+    // eslint-disable-next-line no-global-assign
+    renderDock = function (filter = '') {
+        const r = _origRenderDock(filter);
+        document.querySelectorAll('#dock-scroll .dock-btn').forEach(btn => {
+            btn.draggable = true;
+            btn.style.cursor = 'grab';
+            btn.addEventListener('dragstart', (e) => {
+                draggedNewType = btn.dataset.type;
+                window._draggedNewType = draggedNewType;
+                e.dataTransfer.effectAllowed = 'copy';
+                try { e.dataTransfer.setData('text/plain', 'apx-new:' + draggedNewType); } catch (_) {}
+                btn.style.opacity = '.5';
+            });
+            btn.addEventListener('dragend', () => {
+                draggedNewType = null;
+                window._draggedNewType = null;
+                btn.style.opacity = '';
+                document.querySelectorAll('.drag-over-top,.drag-over-bottom,.drag-over-inside').forEach(x => x.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-inside'));
+                const tz = document.querySelector('#design-stage > .apx-top-drop');
+                if (tz) { tz.style.height = '14px'; tz.style.background = 'transparent'; tz.style.borderColor = 'transparent'; }
+                const sz = document.querySelector('.apx-stage-bottom-drop');
+                if (sz) sz.style.borderColor = 'transparent';
+            });
+        });
+        return r;
+    };
+    // Re-render dock now so new drag handlers attach
+    renderDock(document.getElementById('dock-search-input')?.value || '');
+
+    // Document-level dragover: highlight el-block when dragging new type
+    document.addEventListener('dragover', (e) => {
+        if (!window._draggedNewType) return;
+        const wrap = e.target.closest && e.target.closest('.el-block');
+        if (wrap) {
+            e.preventDefault();
+            const id = wrap.dataset.id;
+            const el = deepFind(id)?.item;
+            if (!el) return;
+            const def = elementTypes[el.type];
+            document.querySelectorAll('.drag-over-top,.drag-over-bottom,.drag-over-inside').forEach(x => x.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-inside'));
+            const r = wrap.getBoundingClientRect();
+            const y = e.clientY - r.top;
+            if (def.container) {
+                if (y < r.height * .25) wrap.classList.add('drag-over-top');
+                else if (y > r.height * .75) wrap.classList.add('drag-over-bottom');
+                else wrap.classList.add('drag-over-inside');
+            } else {
+                if (y < r.height / 2) wrap.classList.add('drag-over-top');
+                else wrap.classList.add('drag-over-bottom');
+            }
+        }
+    }, true);
+
+    // Document-level drop for new types
+    document.addEventListener('drop', (e) => {
+        if (!window._draggedNewType) return;
+        const newType = window._draggedNewType;
+        const wrap = e.target.closest && e.target.closest('.el-block');
+        const topZone = e.target.closest && e.target.closest('.apx-top-drop');
+        const stage = e.target.closest && e.target.closest('#design-stage');
+        if (!wrap && !topZone && !stage) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const newEl = createElement(newType);
+        if (topZone) {
+            elements.unshift(newEl);
+        } else if (wrap) {
+            const id = wrap.dataset.id;
+            const tgt = deepFind(id);
+            if (!tgt) {
+                elements.push(newEl);
+            } else {
+                const def = elementTypes[tgt.item.type];
+                const inside = wrap.classList.contains('drag-over-inside');
+                const top = wrap.classList.contains('drag-over-top');
+                if (inside && def.container) tgt.item.children.push(newEl);
+                else if (top) tgt.parent.splice(tgt.index, 0, newEl);
+                else tgt.parent.splice(tgt.index + 1, 0, newEl);
+            }
+        } else {
+            elements.push(newEl);
+        }
+        document.querySelectorAll('.drag-over-top,.drag-over-bottom,.drag-over-inside').forEach(x => x.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-inside'));
+        window._draggedNewType = null;
+        draggedNewType = null;
+        snapshot();
+        renderDesign();
+        toast(`Added ${elementTypes[newType].name}`, 'success');
+    }, true);
+
+    // Allow the stage area itself to accept drops (so empty-state and after-last work)
+    const stageEl = document.getElementById('design-stage');
+    if (stageEl) {
+        stageEl.addEventListener('dragover', (e) => {
+            if (window._draggedNewType) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+            }
+        });
+    }
+
+    /* ---------- Auto-wire context menus when their `contextTarget` is set ---------- */
+    // We extend updateCode by appending a small bootstrap block.
+    const _origUpdateCode = updateCode;
+    // eslint-disable-next-line no-global-assign
+    updateCode = function () {
+        _origUpdateCode.apply(this, arguments);
+        // Inject auto-wiring for ctxmenu elements with a contextTarget
+        const all = collectAll();
+        const ctxItems = all.filter(e => e.type === 'ctxmenu' && e.contextTarget);
+        if (!ctxItems.length) return;
+        const editor = document.getElementById('code-editor');
+        let doc = editor.value;
+        const closing = '<\/script>\n</body>';
+        if (doc.indexOf(closing) === -1) return;
+        const extra = ctxItems.map(c => {
+            const tid = c.contextTarget;
+            const mid = c.id;
+            return `(function(){const _t=document.getElementById('${tid}'),_m=document.getElementById('${mid}');if(!_t||!_m)return;function _show(ev){document.querySelectorAll('[data-apx-ctxmenu]').forEach(x=>x.classList.remove('apx-ctx-show'));_m.classList.add('apx-ctx-show');const x=(ev.clientX!==undefined?ev.clientX:(ev.touches&&ev.touches[0]?ev.touches[0].clientX:0));const y=(ev.clientY!==undefined?ev.clientY:(ev.touches&&ev.touches[0]?ev.touches[0].clientY:0));_m.style.left=(x+window.scrollX)+'px';_m.style.top=(y+window.scrollY)+'px';if(ev.preventDefault)ev.preventDefault();}_t.addEventListener('contextmenu',_show);let _tt=null;_t.addEventListener('touchstart',function(ev){const t=ev.touches&&ev.touches[0];if(!t)return;_tt=setTimeout(()=>{ev.clientX=t.clientX;ev.clientY=t.clientY;_show(ev);},550);},{passive:true});['touchend','touchcancel','touchmove'].forEach(e=>_t.addEventListener(e,()=>{if(_tt){clearTimeout(_tt);_tt=null;}},{passive:true}));document.addEventListener('click',function(ev){if(!_m.contains(ev.target))_m.classList.remove('apx-ctx-show');});})();`;
+        }).join('\n');
+        doc = doc.replace(closing, extra + '\n' + closing);
+        editor.value = doc;
+        if (document.getElementById('pane-preview').classList.contains('active')) refreshPreview(doc);
+    };
+
+    /* ---------- Make styleString aware of grid-template-columns ---------- */
+    // (handled by processElementCss override above adding the grid-template-columns rule)
+
+    /* ---------- Refresh existing renders ---------- */
+    if (typeof renderDesign === 'function') {
+        try { renderDesign(); } catch (e) {}
+        try { updateCode(); } catch (e) {}
+    }
 })();
     </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
